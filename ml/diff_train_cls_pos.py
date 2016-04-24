@@ -4,6 +4,7 @@ import time
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
 from pyspark.mllib.linalg import Vectors
 from pyspark.mllib.regression import LabeledPoint
+from pyspark.mllib.tree import GradientBoostedTrees
 
 from tempfile import NamedTemporaryFile
 from pyspark.mllib.util import MLUtils
@@ -95,10 +96,12 @@ def main(sc, sql_context, is_hive = True):
     f_check = get_labeled_points("2015-01-01", "9999-99-99", "point_label", sc, sql_context, is_hive)
     lp_check = MLUtils.loadLabeledPoints(sc,f_check)
 
-    model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
+    #model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     #print "xxxxxxxxxxxxxxxx", model._threshold
-    model.clearThreshold()
-
+    #model.clearThreshold()
+    model = GradientBoostedTrees.trainClassifier(lp_train, {},
+                                                 loss="logLoss", numIterations=100, learningRate=0.1, maxDepth=3,
+                                                 maxBins=32)
     preds = model.predict(lp_check.map(lambda x: x.features))
     val(lp_check.map(lambda x: x.label).zip(preds))
 
