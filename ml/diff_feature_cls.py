@@ -106,6 +106,10 @@ def save(lp, sql_context, table_name, is_hive):
         return
 
     sql_context.sql("""
+    DROP TABLE IF EXISTS %s
+    """ % table_name)
+
+    sql_context.sql("""
         CREATE TABLE IF NOT EXISTS %s(
             symbol string,
             act_diff float,
