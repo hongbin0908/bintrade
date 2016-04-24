@@ -1,0 +1,4 @@
+{
+  "eod_test.py::test_date": true, 
+  "msft_eod_test.py::test_retrivalNewestMsDate": true
+}
