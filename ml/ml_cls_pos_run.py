@@ -12,11 +12,10 @@ sys.path.append(local_path)
 from pyspark import SQLContext, SparkConf, HiveContext
 from pyspark import SparkContext
 
-from ml import  diff_feature_cls,diff_feature_cls_pos,diff_train_cls_pos
+from ml import  diff_feature_cls,diff_train_cls_pos
 
 def run(sc, sql_context, is_hive):
     diff_feature_cls.main(sc, sql_context, is_hive = True)
-    diff_feature_cls_pos.main(sc, sql_context, is_hive = True)
     diff_train_cls_pos.main(sc, sql_context, is_hive = True)
 
 if __name__ == "__main__":
