@@ -88,7 +88,7 @@ def cal_feature(df, window, coach, threshold):
                      .map(lambda x: x[1])
 
 
-def save(lp, sql_context, table_name, is_hive):
+def save(lp, table_name, sql_context, is_hive):
     rdd = lp.map(lambda p : (p["symbol"],p["act_diff"], p["is_labeled"], p["date1"], p["date2"], p["date3"], str(p["lp"])))
     schema =   StructType([
         StructField("symbol",     StringType(), True),
@@ -106,7 +106,7 @@ def save(lp, sql_context, table_name, is_hive):
         return
 
     sql_context.sql("""
-    DROP TABLE IF EXISTS %s
+        DROP TABLE IF EXISTS %s
     """ % table_name)
 
     sql_context.sql("""
@@ -128,10 +128,10 @@ def save(lp, sql_context, table_name, is_hive):
 def main(sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
     lp = cal_feature(df, 60,4, 1.02)
-    save(lp, sql_context, is_hive, "point_label_pos")
+    save(lp,  "point_label_pos", sql_context, is_hive)
 
     lp = cal_feature(df, 60, 4, 1.00)
-    save(lp, sql_context, is_hive, "point_label")
+    save(lp, "point_label", sql_context, is_hive)
 
 
 if __name__ == "__main__":
