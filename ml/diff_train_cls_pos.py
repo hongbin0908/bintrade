@@ -18,19 +18,36 @@ def do_check(model, x):
 def val(labels_and_preds):
     acc = 0
     all = 0
-    for each in labels_and_preds.sortBy(lambda x: x[1], ascending=False).take(1000):
+    for each in labels_and_preds.filter(lambda x: x[1] > 0.50).collect():
         if each[0] == 1.0:
             acc += 1
         all += 1
-    postive1000_acc = acc*1.0/all
+    postive65_acc = acc*1.0/all
+    print "postive50:", acc, all, postive65_acc
+
+    acc = 0
+    all = 0
+    for each in labels_and_preds.filter(lambda x: x[1] < 0.50).collect():
+        if each[0] == 0.0:
+            acc += 1
+        all += 1
+    negtive35_acc = acc * 1.0 / all
+    print "negtive50:", acc, all, negtive35_acc
+
 
     acc = labels_and_preds.filter(lambda x:  x[1] > 0.5 and x[0] == 1).count()
     all = labels_and_preds.filter(lambda x : x[1] > 0.5).count()
     postive_acc = acc * 1.0 / all
 
-    postive_rand_acc = labels_and_preds.filter(lambda x: x[0] == 1).count() * 1.0 / labels_and_preds.count()
+    acc = labels_and_preds.filter(lambda x:  x[1] <= 0.5 and x[0] == 0).count()
+    all = labels_and_preds.filter(lambda x : x[1] <= 0.5).count()
+    negtive_acc = acc * 1.0 / all
 
-    print postive1000_acc, postive_acc, postive_rand_acc
+    postive_rand_acc = labels_and_preds.filter(lambda x: x[0] == 1).count() * 1.0 / labels_and_preds.count()
+    negtive_rand_acc = labels_and_preds.filter(lambda x: x[0] == 0).count() * 1.0 / labels_and_preds.count()
+
+    print postive_acc, negtive_acc, postive_rand_acc, negtive_rand_acc
+
 
 
 def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
