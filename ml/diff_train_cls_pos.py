@@ -33,7 +33,7 @@ def val(labels_and_preds):
     print postive1000_acc, postive_acc, postive_rand_acc
 
 
-def get_labeled_points(start, end, sc, sql_context, is_hive):
+def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
     df = sql_context.sql("""
         SELECT
             symbol,
@@ -41,37 +41,18 @@ def get_labeled_points(start, end, sc, sql_context, is_hive):
             date3,
             lp
         FROM
-            label_point
+            %s
         WHERE
             date1 >= '%s'
             AND date3 <= '%s'
             AND is_labeled = 1
-    """ % (start, end))
+    """ % (table_name, start, end))
     tempFile = NamedTemporaryFile(delete=True)
     print df.rdd.map(lambda x: x.lp).first()
     df.rdd.map(lambda x: x.lp).saveAsTextFile(tempFile.name)
     return tempFile.name
 
-def get_labeled_points_pos(start, end, sc, sql_context, is_hive):
-    df = sql_context.sql("""
-        SELECT
-            symbol,
-            date1,
-            date3,
-            lp
-        FROM
-            label_point_pos
-        WHERE
-            date1 >= '%s'
-            AND date3 <= '%s'
-            AND is_labeled = 1
-    """ % (start, end))
-    tempFile = NamedTemporaryFile(delete=True)
-    print df.rdd.map(lambda x: x.lp).first()
-    df.rdd.map(lambda x: x.lp).saveAsTextFile(tempFile.name)
-    return tempFile.name
-
-def get_labeled_points_last(sc, sql_context, is_hive):
+def get_labeled_points_last(table_name, sc, sql_context, is_hive):
     df = sql_context.sql("""
         SELECT
             symbol,
@@ -81,27 +62,24 @@ def get_labeled_points_last(sc, sql_context, is_hive):
             date3,
             lp
         FROM
-            label_point
+            %s
         WHERE
             is_labeled = 0
         ORDER BY
             date2 DESC
-    """)
+    """ % table_name)
     return df
 
-
 def main(sc, sql_context, is_hive = True):
-    f_train= get_labeled_points("2010-01-01", "2014-12-31", sc, sql_context, is_hive)
+    f_train= get_labeled_points("2010-01-01", "2014-12-31", "point_label_pos", sc, sql_context, is_hive)
     print f_train
     lp_train = MLUtils.loadLabeledPoints(sc,f_train)
 
-    f_check = get_labeled_points_pos("2015-01-01", "9999-99-99",sc, sql_context, is_hive)
+    f_check = get_labeled_points("2015-01-01", "9999-99-99", "point_label", sc, sql_context, is_hive)
     lp_check = MLUtils.loadLabeledPoints(sc,f_check)
 
-    model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e6, corrections= 100, tolerance=1e-4, regParam=0.01)
-    #model = LogisticRegressionWithSGD.train(lp_train, iterations=1e6, step=0.01, convergenceTol=1e-4)
+    model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     #print "xxxxxxxxxxxxxxxx", model._threshold
-
     model.clearThreshold()
 
     preds = model.predict(lp_check.map(lambda x: x.features))
@@ -110,21 +88,16 @@ def main(sc, sql_context, is_hive = True):
     preds = model.predict(lp_train.map(lambda x: x.features))
     val(lp_train.map(lambda x: x.label).zip(preds))
 
-
-
-    f_train = get_labeled_points("2010-01-01", "9999-99-99", sc, sql_context, is_hive)
+    f_train = get_labeled_points("2010-01-01", "9999-99-99", "point_label_pos", sc, sql_context, is_hive)
     lp_train = MLUtils.loadLabeledPoints(sc,f_train)
-    model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e6, corrections= 100, tolerance=1e-4, regParam=0.01)
+    model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     model.clearThreshold()
 
-    lp_pred = get_labeled_points_last(sc, sql_context, is_hive)
-
-
+    lp_pred = get_labeled_points_last("label_point", sc, sql_context, is_hive)
 
     for each in lp_pred.collect():
         features = Vectors.dense(eval(each.lp)[1])
         print each.date2, each.symbol, model.predict(features)
-
 
 
 if __name__ == "__main__":

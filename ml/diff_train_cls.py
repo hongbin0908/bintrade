@@ -87,8 +87,6 @@ def get_labeled_points_last(sc, sql_context, is_hive):
     return df
 
 def main(sc, sql_context, is_hive = True):
-
-
     f_train= get_labeled_points("2010-01-01", "2014-12-31", sc, sql_context, is_hive)
     print f_train
     lp_train = MLUtils.loadLabeledPoints(sc,f_train)

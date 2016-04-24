@@ -4,11 +4,11 @@ from pyspark.mllib.classification import LogisticRegressionWithLBFGS
 from pyspark.mllib.linalg import Vectors
 from pyspark.mllib.regression import LabeledPoint
 from pyspark import SparkConf, SparkContext, HiveContext
-from pyspark.sql.types import StructType,StructField,StringType,IntegerType
+from pyspark.sql.types import StructType,StructField,StringType,IntegerType,FloatType
 
 local_path = os.path.dirname(__file__)
 
-def cal_feature_per(x, window, coach):
+def cal_feature_per(x, window, coach, threshold):
     assert window >= 2
     if len(x) == 0:
         return []
@@ -24,18 +24,21 @@ def cal_feature_per(x, window, coach):
 
         cls = 0
         is_labeled = 1
+        act_diff = -1.0
         if i+window+coach >= len(x):
             cls = -1 # no labels
             date3 = ""
             is_labeled = 0
-        elif x[i+window+coach].close > x[i+window].close:
+        elif x[i+window+coach].close / x[i+window].close >= threshold :
             cls = 1
             date3 = x[i+window+coach].date
+            act_diff =  x[i+window+coach].close / x[i+window].close
         else:
             cls = 0
             date3 = x[i+window+coach].date
+            act_diff =  x[i+window+coach].close / x[i+window].close
         lp_feature = LabeledPoint( cls, Vectors.dense(l_feature))
-        l.append({"symbol":x[i+window].symbol,"is_labeled":is_labeled, "date1":x[i].date,"date2":x[i+window].date, "date3":date3, "lp": lp_feature})
+        l.append({"symbol":x[i+window].symbol, "act_diff": act_diff, "is_labeled":is_labeled, "date1":x[i].date,"date2":x[i+window].date, "date3":date3, "lp": lp_feature})
 
     return l
 
@@ -79,16 +82,17 @@ def get_lp(sc, sql_context, is_hive):
     return df_lp
 
 
-def cal_feature(df, window, coach):
+def cal_feature(df, window, coach, threshold):
     return df.rdd.groupBy(lambda x: x.symbol).map(lambda x : (x[0], list(x[1])))\
-                     .flatMapValues(lambda x: cal_feature_per(x, window, coach))\
+                     .flatMapValues(lambda x: cal_feature_per(x, window, coach, threshold))\
                      .map(lambda x: x[1])
 
 
-def save(lp, sql_context, is_hive):
-    rdd = lp.map(lambda p : (p["symbol"], p["is_labeled"], p["date1"], p["date2"], p["date3"], str(p["lp"])))
+def save(lp, sql_context, table_name, is_hive):
+    rdd = lp.map(lambda p : (p["symbol"],p["act_diff"], p["is_labeled"], p["date1"], p["date2"], p["date3"], str(p["lp"])))
     schema =   StructType([
         StructField("symbol",     StringType(), True),
+        StructField("act_diff",     FloatType(), True),
         StructField("is_labeled",   IntegerType(), True),
         StructField("date1",   StringType(), True),
         StructField("date2",   StringType(), True),
@@ -98,12 +102,13 @@ def save(lp, sql_context, is_hive):
     df = sql_context.createDataFrame(rdd, schema)
 
     if not is_hive:
-        df.registerAsTable("label_point")
+        df.registerAsTable(table_name)
         return
 
     sql_context.sql("""
-        CREATE TABLE IF NOT EXISTS label_point(
+        CREATE TABLE IF NOT EXISTS %s(
             symbol string,
+            act_diff float,
             is_labeled int,
             date1 string,
             date2 string,
@@ -111,15 +116,18 @@ def save(lp, sql_context, is_hive):
             lp   string
             )
             ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
-            """)
+            """ % table_name)
 
-    df.repartition(64).insertInto("label_point", overwrite = True)
+    df.repartition(64).insertInto(table_name, overwrite = True)
 
 
 def main(sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    lp = cal_feature(df, 60,4)
-    save(lp, sql_context, is_hive)
+    lp = cal_feature(df, 60,4, 1.02)
+    save(lp, sql_context, is_hive, "point_label_pos")
+
+    lp = cal_feature(df, 60, 4, 1.00)
+    save(lp, sql_context, is_hive, "point_label")
 
 
 if __name__ == "__main__":
