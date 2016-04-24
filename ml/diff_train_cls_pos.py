@@ -100,7 +100,7 @@ def main(sc, sql_context, is_hive = True):
     #print "xxxxxxxxxxxxxxxx", model._threshold
     #model.clearThreshold()
     model = GradientBoostedTrees.trainClassifier(lp_train, {},
-                                                 loss="logLoss", numIterations=100, learningRate=0.1, maxDepth=3,
+                                                 loss="logLoss", numIterations=1000, learningRate=0.1, maxDepth=3,
                                                  maxBins=32)
     preds = model.predict(lp_check.map(lambda x: x.features))
     val(lp_check.map(lambda x: x.label).zip(preds))
