@@ -15,6 +15,6 @@ cd .. && rm -rf eod.zip && zip -r eod.zip eod/ && cd -
 sh -x ../eod/eod_job.sh || exit $?
 sh -x ../post/post_job.sh || exit $?
 sh -x ../ta/mat_close_job.sh  || exit $?
-sh -x ../ml/ml_cls_job.sh  || exit $?
+sh -x ../ml/ml_cls_pos_job.sh  || exit $?
 
 popd  > /dev/null # return the directory orignal
