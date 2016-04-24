@@ -127,7 +127,7 @@ def save(lp, table_name, sql_context, is_hive):
 
 def main(sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    lp = cal_feature(df, 60,4, 1.02)
+    lp = cal_feature(df, 60,4, 1.04)
     save(lp,  "point_label_pos", sql_context, is_hive)
 
     lp = cal_feature(df, 60, 4, 1.00)
