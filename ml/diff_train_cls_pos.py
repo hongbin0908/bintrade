@@ -129,7 +129,7 @@ def main(sc, sql_context, is_hive = True):
 
 if __name__ == "__main__":
     conf = SparkConf()
-    conf.set("spark.executor.instances", "4")
+    conf.set("spark.executor.instances", "8")
     conf.set("spark.executor.cores", "4")
     conf.set("spark.executor.memory", "32g")
     sc = SparkContext(appName="bintrade.post.index", conf=conf)
