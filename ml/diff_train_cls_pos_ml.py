@@ -5,7 +5,7 @@ from pyspark.ml import Pipeline
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
-from pyspark.mllib.linalg import Vectors, Vector
+from pyspark.mllib.linalg import Vectors, Vector, DenseVector
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.mllib.tree import GradientBoostedTrees
 
@@ -116,13 +116,21 @@ def main(sc, sql_context, is_hive = True):
 
     print predictions.printSchema()
 
-    print predictions.where("prediction>0.5 and label > 0.5").count() / predictions.where("prediction>0.5").count()
-    print predictions.where("prediction>0.6 and label > 0.5").count() / predictions.where("prediction>0.6").count()
+
+    val(predictions)
 
     for each in predictions.take(10):
         print each
 
-
+def val(predictions):
+    acc = 0
+    all = 0
+    for each in predictions.filter(lambda x: x.probability.toArray()[1] > 0.5).collect():
+        if each.label == 1.0:
+            acc += 1
+        all += 1
+    postive65_acc = acc*1.0/all
+    print "postive65:", acc, all, postive65_acc
 if __name__ == "__main__":
     conf = SparkConf()
     conf.set("spark.executor.instances", "8")
