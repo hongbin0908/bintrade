@@ -72,8 +72,8 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
             symbol
     """ % (table_name, start, end))
 
-    
-    rdd = df.map(lambda x : x.lp).map(lambda x : (x.label, x.features))
+
+    print df.map(lambda x : x.lp).first()
     schema =   StructType([
         StructField("label",     FloatType(), True),
         StructField("features",     FloatType(), True),
