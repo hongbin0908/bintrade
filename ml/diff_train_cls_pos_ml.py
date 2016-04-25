@@ -4,7 +4,7 @@ import time
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
-from pyspark.mllib.linalg import Vectors
+from pyspark.mllib.linalg import Vectors, Vector
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.mllib.tree import GradientBoostedTrees
 
@@ -73,13 +73,8 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
     """ % (table_name, start, end))
 
 
-    print df.map(lambda x : x.lp).first()
-    schema =   StructType([
-        StructField("label",     FloatType(), True),
-        StructField("features",     FloatType(), True),
-    ])
-
-    return sql_context.createDataFrame(rdd, schema)
+    rdd = df.map(lambda x : x.lp).map(lambda x : (float(x[0]), Vectors.dense(eval(x[1]))))
+    return sql_context.createDataFrame(rdd, ["label", "features"])
 
 def get_labeled_points_last(table_name, sc, sql_context, is_hive):
     df = sql_context.sql("""

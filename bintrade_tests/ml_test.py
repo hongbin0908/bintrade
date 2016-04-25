@@ -10,4 +10,4 @@ import bintrade_tests.sparklib as slib
 
 def test_randomforest():
     data = slib.sqlContext.read.format("libsvm").load(local_path + "/sample_libsvm_data.txt")
-    print data.first()
+    print data.printSchema()
