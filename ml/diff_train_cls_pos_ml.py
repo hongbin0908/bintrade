@@ -9,6 +9,7 @@ from pyspark.mllib.tree import GradientBoostedTrees
 from tempfile import NamedTemporaryFile
 from pyspark.mllib.util import MLUtils
 from pyspark import SparkConf, SparkContext, HiveContext,RDD
+from pyspark.sql.types import StructType, StructField, StringType, FloatType
 
 
 def do_check(model, x):
@@ -68,8 +69,13 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
             date1,
             symbol
     """ % (table_name, start, end))
+    rdd = df.map(lambda x : x.lp).map(lambda x : (x.label, x.features))
+    schema =   StructType([
+        StructField("label",     FloatType(), True),
+        StructField("features",     FloatType(), True),
+    ])
 
-    return df.select(df.lp.label.alias("label"), df.lp.features.alias("features"))
+    return sql_context.createDataFrame(rdd, schema)
 
 def get_labeled_points_last(table_name, sc, sql_context, is_hive):
     df = sql_context.sql("""
