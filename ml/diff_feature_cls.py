@@ -79,7 +79,7 @@ def get_lp(sc, sql_context, is_hive):
     SELECT
         symbol,
         date,
-        pid14,
+        pdi14,
         mdi14,
         adx
     FROM
