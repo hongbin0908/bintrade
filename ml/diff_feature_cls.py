@@ -77,15 +77,15 @@ def get_lp(sc, sql_context, is_hive):
 
     df_adx = sql_context.sql("""
     SELECT
-        adx.symbol AS symbol,
-        adx.date AS date,
-        adx.pdi14 AS pid14,
-        adx.mdi14 AS mdi14,,
-        adx.adx AS adx
+        symbol,,
+        date,
+        pid14,
+        mdi14,
+        adx
     FROM
-        ta_adx adx
+        ta_adx
     WHERE
-        adx.adx > 0
+        adx > 0
     """).repartition(64)
 
     df_lp = df_close.join(df_mat, [df_close.symbol == df_mat.symbol, df_close.date == df_mat.date], 'inner' )\
