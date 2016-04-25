@@ -1,6 +1,8 @@
 
 import time
 
+from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
 from pyspark.mllib.linalg import Vectors
 from pyspark.mllib.regression import LabeledPoint
@@ -69,6 +71,8 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
             date1,
             symbol
     """ % (table_name, start, end))
+
+    
     rdd = df.map(lambda x : x.lp).map(lambda x : (x.label, x.features))
     schema =   StructType([
         StructField("label",     FloatType(), True),
@@ -99,6 +103,15 @@ def get_labeled_points_last(table_name, sc, sql_context, is_hive):
 def main(sc, sql_context, is_hive = True):
     lp_train= get_labeled_points("2010-01-01", "2014-12-31", "point_label_pos", sc, sql_context, is_hive)
     print lp_train.first()
+
+    labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_train)
+
+    featureIndexer = \
+        VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(lp_train)
+
+    rf = RandomForestClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures")
+
+
 
 if __name__ == "__main__":
     conf = SparkConf()
