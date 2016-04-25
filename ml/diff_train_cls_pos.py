@@ -116,7 +116,7 @@ def main(sc, sql_context, is_hive = True):
     val(lp_check.map(lambda x: x.label).zip(preds))
 
     preds = model.predict(lp_check2.map(lambda x: x.features))
-    val(lp_check.map(lambda x: x.label).zip(preds))
+    val(lp_check2.map(lambda x: x.label).zip(preds))
 
     preds = model.predict(lp_train.map(lambda x: x.features))
     val(lp_train.map(lambda x: x.label).zip(preds))
