@@ -100,6 +100,8 @@ def main(sc, sql_context, is_hive = True):
     lp_train= get_labeled_points("2010-01-01", "2014-12-31", "point_label_pos", sc, sql_context, is_hive)
     print lp_train.first()
 
+    lp_check = get_labeled_points("2015-01-01", "9999-99-99", "point_label", sc, sql_context, is_hive)
+
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_train)
 
     featureIndexer = \
@@ -110,9 +112,15 @@ def main(sc, sql_context, is_hive = True):
     pipeline = Pipeline(stages=[labelIndexer, featureIndexer, rf])
 
     model = pipeline.fit(lp_train)
-    predictions = model.transform(lp_train)
+    predictions = model.transform(lp_check)
 
     print predictions.printSchema()
+
+    print predictions.where("prediction>0.5 and label > 0.5").count() / predictions.where("prediction>0.5").count()
+    print predictions.where("prediction>0.6 and label > 0.5").count() / predictions.where("prediction>0.6").count()
+
+    for each in predictions.take(10):
+        print each
 
 
 if __name__ == "__main__":
