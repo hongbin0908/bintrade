@@ -1,6 +1,7 @@
 
 import time
 
+from pyspark.ml import Pipeline
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
@@ -73,7 +74,7 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
     """ % (table_name, start, end))
 
 
-    rdd = df.map(lambda x : x.lp).map(lambda x : (x[0], Vectors.dense(eval(x[1]))))
+    rdd = df.map(lambda x : eval(x.lp)).map(lambda x : (x[0], Vectors.dense(eval(x[1]))))
     return sql_context.createDataFrame(rdd, ["label", "features"])
 
 def get_labeled_points_last(table_name, sc, sql_context, is_hive):
@@ -106,6 +107,12 @@ def main(sc, sql_context, is_hive = True):
 
     rf = RandomForestClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures")
 
+    pipeline = Pipeline(stages=[labelIndexer, featureIndexer, rf])
+
+    model = pipeline.fit(lp_train)
+    predictions = model.transform(lp_train)
+
+    print predictions.printSchema()
 
 
 if __name__ == "__main__":
