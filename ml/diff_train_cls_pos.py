@@ -64,6 +64,9 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
             date1 >= '%s'
             AND date3 <= '%s'
             AND is_labeled = 1
+        ORDER BY
+            date1,
+            symbol
     """ % (table_name, start, end))
     tempFile = NamedTemporaryFile(delete=True)
     print df.rdd.map(lambda x: x.lp).first()
@@ -87,6 +90,7 @@ def get_labeled_points_last(table_name, sc, sql_context, is_hive):
             date2 DESC
     """ % table_name)
     return df
+
 
 def main(sc, sql_context, is_hive = True):
     f_train= get_labeled_points("2010-01-01", "2014-12-31", "point_label_pos", sc, sql_context, is_hive)
@@ -126,6 +130,7 @@ if __name__ == "__main__":
     conf.set("spark.executor.cores", "4")
     conf.set("spark.executor.memory", "32g")
     sc = SparkContext(appName="bintrade.post.index", conf=conf)
+    sc.setCheckpointDir("checkpoint/")
     sql_context = HiveContext(sc)
     sql_context.sql("use fex")
     main(sc, sql_context, is_hive=True)
