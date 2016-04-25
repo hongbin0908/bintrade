@@ -79,9 +79,9 @@ def get_lp(sc, sql_context, is_hive):
     SELECT
         adx.symbol AS symbol,
         adx.date AS date,
-        pdi14,
-        mdi14,
-        mat1.adx
+        adx.pdi14 AS pid14,
+        adx.mdi14 AS mdi14,,
+        adx.adx AS adx
     FROM
         ta_adx adx
     WHERE
