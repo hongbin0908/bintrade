@@ -112,6 +112,8 @@ def main(sc, sql_context, is_hive = True):
     model = pipeline.fit(lp_train)
     predictions = model.transform(lp_train)
 
+    print predictions.printSchema()
+
 
 if __name__ == "__main__":
     conf = SparkConf()
