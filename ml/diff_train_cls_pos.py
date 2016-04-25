@@ -97,16 +97,25 @@ def main(sc, sql_context, is_hive = True):
     print f_train
     lp_train = MLUtils.loadLabeledPoints(sc,f_train)
 
+
+
+
     f_check = get_labeled_points("2015-01-01", "9999-99-99", "point_label", sc, sql_context, is_hive)
     lp_check = MLUtils.loadLabeledPoints(sc,f_check)
+
+    f_check2 = get_labeled_points("2015-01-01", "9999-99-99", "point_label_pos", sc, sql_context, is_hive)
+    lp_check2 = MLUtils.loadLabeledPoints(sc,f_check)
 
     #model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     #print "xxxxxxxxxxxxxxxx", model._threshold
     #model.clearThreshold()
     model = GradientBoostedTrees.trainClassifier(lp_train, {},
-                                                 loss="logLoss", numIterations=100, learningRate=0.1, maxDepth=3,
+                                                 loss="logLoss", numIterations=60, learningRate=0.1, maxDepth=3,
                                                  maxBins=32)
     preds = model.predict(lp_check.map(lambda x: x.features))
+    val(lp_check.map(lambda x: x.label).zip(preds))
+
+    preds = model.predict(lp_check2.map(lambda x: x.features))
     val(lp_check.map(lambda x: x.label).zip(preds))
 
     preds = model.predict(lp_train.map(lambda x: x.features))
@@ -116,7 +125,7 @@ def main(sc, sql_context, is_hive = True):
     lp_train = MLUtils.loadLabeledPoints(sc,f_train)
     #model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     model = GradientBoostedTrees.trainClassifier(lp_train, {},
-                                                 loss="logLoss", numIterations=100, learningRate=0.1, maxDepth=3,
+                                                 loss="logLoss", numIterations=60, learningRate=0.1, maxDepth=3,
                                                  maxBins=32)
     #model.clearThreshold()
 
