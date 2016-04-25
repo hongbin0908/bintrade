@@ -118,7 +118,7 @@ def main(sc, sql_context, is_hive = True):
     model = GradientBoostedTrees.trainClassifier(lp_train, {},
                                                  loss="logLoss", numIterations=100, learningRate=0.1, maxDepth=3,
                                                  maxBins=32)
-    model.clearThreshold()
+    #model.clearThreshold()
 
     lp_pred = get_labeled_points_last("label_point", sc, sql_context, is_hive)
 
