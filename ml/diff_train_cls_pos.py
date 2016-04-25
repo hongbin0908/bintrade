@@ -135,6 +135,7 @@ if __name__ == "__main__":
     sc = SparkContext(appName="bintrade.post.index", conf=conf)
     sc.setCheckpointDir("checkpoint/")
     sql_context = HiveContext(sc)
+    sql_context.setConf("spark.sql.shuffle.partitions", "32")
     sql_context.sql("use fex")
     main(sc, sql_context, is_hive=True)
     sc.stop()
