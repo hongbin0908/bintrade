@@ -74,7 +74,7 @@ def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
     """ % (table_name, start, end))
 
 
-    rdd = df.map(lambda x : eval(x.lp)).map(lambda x : (x[0], Vectors.dense(eval(x[1]))))
+    rdd = df.map(lambda x : eval(str(x.lp))).map(lambda x : (x[0], Vectors.dense(eval(x[1]))))
     return sql_context.createDataFrame(rdd, ["label", "features"])
 
 def get_labeled_points_last(table_name, sc, sql_context, is_hive):
@@ -111,8 +111,6 @@ def main(sc, sql_context, is_hive = True):
 
     model = pipeline.fit(lp_train)
     predictions = model.transform(lp_train)
-
-    print predictions.printSchema()
 
 
 if __name__ == "__main__":
