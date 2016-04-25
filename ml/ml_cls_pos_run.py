@@ -25,6 +25,7 @@ if __name__ == "__main__":
     conf.set("spark.executor.memory", "32g")
 
     sc = SparkContext(appName="bintrade_candidate", master="yarn-client", conf=conf)
+    sc.setCheckpointDir("checkpoint/")
     sqlContext = HiveContext(sc)
     sqlContext.setConf("spark.sql.shuffle.partitions", "32")
 
