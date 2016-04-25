@@ -77,7 +77,7 @@ def get_lp(sc, sql_context, is_hive):
 
     df_adx = sql_context.sql("""
     SELECT
-        symbol,,
+        symbol,
         date,
         pid14,
         mdi14,
