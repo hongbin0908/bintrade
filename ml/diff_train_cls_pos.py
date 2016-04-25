@@ -104,7 +104,7 @@ def main(sc, sql_context, is_hive = True):
     lp_check = MLUtils.loadLabeledPoints(sc,f_check)
 
     f_check2 = get_labeled_points("2015-01-01", "9999-99-99", "point_label_pos", sc, sql_context, is_hive)
-    lp_check2 = MLUtils.loadLabeledPoints(sc,f_check)
+    lp_check2 = MLUtils.loadLabeledPoints(sc,f_check2)
 
     #model = LogisticRegressionWithLBFGS.train(lp_train, iterations=1e8, corrections= 100, tolerance=1e-8, regParam=0.01)
     #print "xxxxxxxxxxxxxxxx", model._threshold
