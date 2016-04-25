@@ -75,10 +75,33 @@ def get_lp(sc, sql_context, is_hive):
     print "df_mat:", df_mat.count()
     print df_mat.orderBy(df_mat.date.desc()).first()
 
+    df_adx = sql_context.sql("""
+    SELECT
+        adx.symbol AS symbol,
+        adx.date AS date,
+        pdi14,
+        mdi14,
+        mat1.adx
+    FROM
+        ta_adx adx
+    WHERE
+        adx.adx > 0
+    """).repartition(64)
+
     df_lp = df_close.join(df_mat, [df_close.symbol == df_mat.symbol, df_close.date == df_mat.date], 'inner' )\
-            .select(df_close.symbol.alias("symbol"), df_close.date.alias("date"), df_close.open.alias("open"),df_close.close.alias("close"), df_mat.mat_dual.alias("mat_dual"))
+                    .join(df_adx, [df_close.symbol == df_adx.symbol, df_close.date == df_adx.date], 'inner' )\
+                    .select(df_close.symbol.alias("symbol"),
+                            df_close.date.alias("date"),
+                            df_close.open.alias("open"),
+                            df_close.close.alias("close"),
+                            df_mat.mat_dual.alias("mat_dual"),
+                            df_adx.pdi14.alias("pdi14"),
+                            df_adx.mdi14.alias("mdi14"),
+                            df_adx.adx.alias("adx"))
     print "df_lp:", df_lp.count()
-    print df_lp.orderBy(df_lp.date.desc()).first()
+
+    for each in df_lp.orderBy(df_lp.date.desc()).take(10):
+        print each
     return df_lp
 
 
@@ -127,7 +150,7 @@ def save(lp, table_name, sql_context, is_hive):
 
 def main(sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    lp = cal_feature(df, 60,4, 1.01)
+    lp = cal_feature(df, 60,4, 1.02)
     save(lp,  "point_label_pos", sql_context, is_hive)
 
     lp = cal_feature(df, 60, 4, 1.00)
@@ -144,4 +167,3 @@ if __name__ == "__main__":
     sql_context.sql(""" use fex """)
     main(sc, sql_context, is_hive=True)
     sc.stop()
-
