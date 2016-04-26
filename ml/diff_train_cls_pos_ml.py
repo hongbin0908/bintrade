@@ -131,6 +131,7 @@ def val(predictions):
         all += 1
     postive65_acc = acc*1.0/all
     print "postive65:", acc, all, postive65_acc
+
 if __name__ == "__main__":
     conf = SparkConf()
     conf.set("spark.executor.instances", "8")
