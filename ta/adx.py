@@ -24,7 +24,7 @@ def getDfSC(sc, sqlContext):
 
     return dfSC
 
-def create_table(sc, sqlContext,isHive):
+def create_table(sc, sql_context,isHive):
     if not isHive:
         sqlContext.createDataFrame(sc.emptyRDD(), schema = StructType([
                                 StructField("symbol", StringType(), True),
@@ -37,7 +37,7 @@ def create_table(sc, sqlContext,isHive):
 
     sql_context.sql("""DROP TABLE IF EXISTS %s""" % "ta_adx")
 
-    sqlContext.sql("""
+    sql_context.sql("""
         CREATE TABLE IF NOT EXISTS ta_adx (
             symbol string,
             date string,

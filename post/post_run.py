@@ -15,7 +15,7 @@ from pyspark import SparkContext
 from post import norm, index, relative
 
 
-def run(sc, sql_context, is_hive):
+def main(sc, sql_context, is_hive):
     norm.main(sc, sql_context, is_hive = True)
     index.main(sc, sql_context, is_hive = True)
     relative.main(sc, sql_context, is_hive = True)
@@ -31,4 +31,4 @@ if __name__ == "__main__":
     sqlContext = HiveContext(sc)
     sqlContext.setConf("spark.sql.shuffle.partitions", "32")
     sqlContext.sql("use fex")
-    run(sc, sqlContext, is_hive=True)
+    main(sc, sqlContext, is_hive=True)

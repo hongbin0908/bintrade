@@ -104,7 +104,7 @@ def save(sc, sqlContext, rddMat, window, isHive = True):
     if not isHive:
         dfMat.registerAsTable(get_table_name(window))
         return
-    dfMat.repartition(16).insertInto(get_table_name(window), overwrite = True)
+    dfMat.insertInto(get_table_name(window), overwrite = True)
 def main(sc, sqlContext, is_hive = True):
     dfSC = getDfSC(sc, sqlContext)
     for window in (8,20):

@@ -21,6 +21,9 @@ def cal_feature_per(x, window, coach, threshold):
             l_feature.append(x[i+j].close / x[i+j-1].close)
             #l_feature.append(x[i+j].open / x[i].open)
             #l_feature.append(x[i+j].mat_dual)
+            l_feature.append(x[i+j].adx / x[i+j-1].adx)
+            l_feature.append(x[i+j].pdi14 / x[i+j-1].mdi14)
+            l_feature.append(x[i+j].adx)
 
         cls = 0
         is_labeled = 1
@@ -52,7 +55,7 @@ def get_lp(sc, sql_context, is_hive):
         close as close
     FROM
         eod_rel
-    """).repartition(64)
+    """)
 
     print "df_close:", df_close.count()
     print df_close.orderBy(df_close.date.desc()).first()
@@ -71,7 +74,7 @@ def get_lp(sc, sql_context, is_hive):
         AND mat1.date = mat2.date
     WHERE
         mat1.close_mat > 0
-    """).repartition(64)
+    """)
     print "df_mat:", df_mat.count()
     print df_mat.orderBy(df_mat.date.desc()).first()
 
@@ -86,7 +89,7 @@ def get_lp(sc, sql_context, is_hive):
         ta_adx
     WHERE
         adx > 0
-    """).repartition(64)
+    """)
 
     df_lp = df_close.join(df_mat, [df_close.symbol == df_mat.symbol, df_close.date == df_mat.date], 'inner' )\
                     .join(df_adx, [df_close.symbol == df_adx.symbol, df_close.date == df_adx.date], 'inner' )\
@@ -145,15 +148,15 @@ def save(lp, table_name, sql_context, is_hive):
             ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
             """ % table_name)
 
-    df.repartition(64).insertInto(table_name, overwrite = True)
+    df.insertInto(table_name, overwrite = True)
 
 
-def main(sc, sql_context, is_hive = True):
+def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    lp = cal_feature(df, 60,4, 1.02)
+    lp = cal_feature(df, window ,coach, 1.00)
     save(lp,  "point_label_pos", sql_context, is_hive)
 
-    lp = cal_feature(df, 60, 4, 1.00)
+    lp = cal_feature(df, window, coach, 1.00)
     save(lp, "point_label", sql_context, is_hive)
 
 
@@ -165,5 +168,6 @@ if __name__ == "__main__":
     sc = SparkContext(appName="bintrade.ml.diff_feature", conf=conf)
     sql_context = HiveContext(sc)
     sql_context.sql(""" use fex """)
-    main(sc, sql_context, is_hive=True)
+    sql_context.setConf("spark.sql.shuffle.partitions", "32")
+    main(60, 4, sc, sql_context, is_hive=True)
     sc.stop()

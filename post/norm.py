@@ -36,8 +36,6 @@ def cal_adj_per(x):
 
 
 def cal_adj(sc, sql_context, is_hive):
-    if is_hive:
-        sql_context.sql("use fex")
     df_eod = sql_context.sql("""
         SELECT
             symbol,
@@ -148,7 +146,7 @@ def save(rdd_norm, sc, sql_context, is_hive):
             ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
         """)
 
-    df_norm.repartition(16).insertInto("eod_norm", overwrite = True)
+    df_norm.insertInto("eod_norm", overwrite = True)
 
 
 def main(sc, sql_context, is_hive = True):

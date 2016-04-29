@@ -2,7 +2,7 @@
 import time
 
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.classification import RandomForestClassifier,GBTClassifier,LogisticRegression
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.mllib.classification import LogisticRegressionWithLBFGS
 from pyspark.mllib.linalg import Vectors, Vector, DenseVector
@@ -20,65 +20,79 @@ def do_check(model, x):
     return (x.label, pred)
 
 
-def val(labels_and_preds):
-    acc = 0
-    all = 0
-    for each in labels_and_preds.filter(lambda x: x[1] > 0.50).collect():
-        if each[0] == 1.0:
-            acc += 1
-        all += 1
-    postive65_acc = acc*1.0/all
-    print "postive50:", acc, all, postive65_acc
 
-    acc = 0
-    all = 0
-    for each in labels_and_preds.filter(lambda x: x[1] < 0.50).collect():
-        if each[0] == 0.0:
-            acc += 1
-        all += 1
-    negtive35_acc = acc * 1.0 / all
-    print "negtive50:", acc, all, negtive35_acc
-
-
-    acc = labels_and_preds.filter(lambda x:  x[1] > 0.5 and x[0] == 1).count()
-    all = labels_and_preds.filter(lambda x : x[1] > 0.5).count()
-    postive_acc = acc * 1.0 / all
-
-    acc = labels_and_preds.filter(lambda x:  x[1] <= 0.5 and x[0] == 0).count()
-    all = labels_and_preds.filter(lambda x : x[1] <= 0.5).count()
-    negtive_acc = acc * 1.0 / all
-
-    postive_rand_acc = labels_and_preds.filter(lambda x: x[0] == 1).count() * 1.0 / labels_and_preds.count()
-    negtive_rand_acc = labels_and_preds.filter(lambda x: x[0] == 0).count() * 1.0 / labels_and_preds.count()
-
-    print postive_acc, negtive_acc, postive_rand_acc, negtive_rand_acc
-
-
-
-def get_labeled_points(start, end, table_name, sc, sql_context, is_hive):
-    df = sql_context.sql("""
+def get_labeled_points(start, end, table_name, sc, sql_context):
+    sqlstr = """
         SELECT
             symbol,
             date1,
+            date2,
             date3,
+            act_diff,
             lp
         FROM
             %s
         WHERE
             date1 >= '%s'
-            AND date3 <= '%s'
+            AND date3 < '%s'
             AND is_labeled = 1
         ORDER BY
             date1,
             symbol
-    """ % (table_name, start, end))
+    """ % (table_name, start, end)
+    df = sql_context.sql(sqlstr)
 
 
-    rdd = df.map(lambda x : eval(str(x.lp))).map(lambda x : (x[0], Vectors.dense(x[1])))
-    return sql_context.createDataFrame(rdd, ["label", "features"])
+    rdd = df.map(lambda x : (x.symbol, x.date2, x.date3, eval(str(x.lp)))).map(lambda x : (x[0], x[1], x[2], x[3][0], Vectors.dense(x[3][1])))
+    return sql_context.createDataFrame(rdd, ["symbol", "date2", "date3", "label", "features"])
 
-def get_labeled_points_last(table_name, sc, sql_context, is_hive):
+def get_labeled_points_check(start, end, table_name, sc, sql_context):
+    sqlstr = """
+        SELECT
+            symbol,
+            date1,
+            date2,
+            date3,
+            act_diff,
+            lp
+        FROM
+            %s
+        WHERE
+            date2 >= '%s'
+            AND date2 < '%s'
+            AND is_labeled = 1
+        ORDER BY
+            date1,
+            symbol
+    """ % (table_name, start, end)
+    df = sql_context.sql(sqlstr)
+
+
+    rdd = df.map(lambda x : {"symbol":x.symbol, "date1":x.date1, "date2":x.date2, "date3":x.date3, "act_diff":x.act_diff, "lp": eval(str(x.lp))})\
+            .map(lambda x : (x["symbol"], x["date1"], x["date2"], x["date3"], x["act_diff"], x["lp"][0], Vectors.dense(x["lp"][1])))
+    return sql_context.createDataFrame(rdd, ["symbol", "date1", "date2", "date3", "act_diff", "label", "features"])
+def get_labeled_points_last(table_name, sc, sql_context):
     df = sql_context.sql("""
+        SELECT
+            symbol,
+            is_labeled,
+            date1,
+            date2,
+            date3,
+            act_diff,
+            lp
+        FROM
+            %s
+        WHERE
+            is_labeled = 0
+        ORDER BY
+            date2 DESC
+    """ % table_name)
+    rdd = df.map(lambda x : (x.symbol, x.is_labeled, x.date2, x.date3, eval(str(x.lp)))).map(lambda x : (x[0], x[1], x[2],x[3], Vectors.dense(x[4][1])))
+    return sql_context.createDataFrame(rdd, ["symbol", "is_labeled", "date2", "date3", "features"])
+
+def get_labeled_points_cur(cur, table_name, sc, sql_context):
+    sqlstr ="""
         SELECT
             symbol,
             is_labeled,
@@ -89,48 +103,146 @@ def get_labeled_points_last(table_name, sc, sql_context, is_hive):
         FROM
             %s
         WHERE
-            is_labeled = 0
+            is_labeled = 1
+            AND date2 = "%s"
         ORDER BY
             date2 DESC
-    """ % table_name)
-    return df
+    """ % (table_name, cur)
+    df = sql_context.sql(sqlstr)
+    if df.count() == 0:
+        return None
+    rdd = df.map(lambda x : (x.symbol, x.is_labeled, x.date2, x.date3, eval(str(x.lp)))).map(lambda x : (x[0], x[1], x[2],x[3],x[4][0], Vectors.dense(x[4][1])))
+    return sql_context.createDataFrame(rdd, ["symbol", "is_labeled", "date2", "date3", "label", "features"])
 
-
-def main(sc, sql_context, is_hive = True):
-    lp_train= get_labeled_points("2010-01-01", "2014-12-31", "point_label_pos", sc, sql_context, is_hive)
+def run(start1, end1, start2, end2, sc, sql_context):
+    lp_train= get_labeled_points(start1, end1, "point_label_pos", sc, sql_context)
     print lp_train.first()
 
-    lp_check = get_labeled_points("2015-01-01", "9999-99-99", "point_label", sc, sql_context, is_hive)
 
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_train)
+    td = labelIndexer.transform(lp_train)
+    label2index = {}
+    for each in  sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).collect()]),
+                key=lambda x: x[0]):
+        label2index[int(each[0])] = int(each[1])
 
     featureIndexer = \
         VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(lp_train)
 
-    rf = RandomForestClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures")
+    #rf = RandomForestClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures")
+    #rf = GBTClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures", maxIter = 100)
+    #rf = LogisticRegression(maxIter = 100000, labelCol="indexedLabel", featuresCol="indexedFeatures")
+    rf = get_model()
 
     pipeline = Pipeline(stages=[labelIndexer, featureIndexer, rf])
 
     model = pipeline.fit(lp_train)
+    lp_check = get_labeled_points_check(start2, end2, "point_label", sc, sql_context)
     predictions = model.transform(lp_check)
+    val(predictions, label2index)
+def main(sc, sql_context):
+    sql_context.sql("""
+    DROP TABLE IF EXISTS %s
+    """ % "check_pred")
 
-    print predictions.printSchema()
+    sql_context.sql("""
+        CREATE TABLE IF NOT EXISTS check_pred(
+            symbol  string,
+            date1    string,
+            date2    string,
+            date3    string,
+            act_diff float,
+            prob     float,
+            indexedLabel float,
+            label    float,
+            pred     float
+            )
+            ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+        """)
+    run("2011-03-01","2015-04-01","2015-04-01", "2016-04-01", sc, sql_context)
+    #run("2012-02-01","2016-02-01","2016-02-01", "2016-03-01", sc, sql_context)
+    #run("2012-01-01","2016-01-01","2016-01-01", "2016-02-01", sc, sql_context)
+    #run("2011-12-01","2015-12-01","2015-12-01", "2016-01-01", sc, sql_context)
+    #run("2011-11-01","2015-11-01","2015-11-01", "2015-12-01", sc, sql_context)
+    #run("2011-10-01","2015-10-01","2015-10-01", "2015-11-01", sc, sql_context)
+    #run("2011-09-01","2015-09-01","2015-09-01", "2015-10-01", sc, sql_context)
+    #run("2011-08-01","2015-08-01","2015-08-01", "2015-09-01", sc, sql_context)
+    #run("2011-07-01","2015-07-01","2015-07-01", "2015-08-01", sc, sql_context)
+    #run("2011-06-01","2015-06-01","2015-06-01", "2015-07-01", sc, sql_context)
+    #run("2011-05-01","2015-05-01","2015-05-01", "2015-06-01", sc, sql_context)
+    #run("2011-04-01","2015-04-01","2015-04-01", "2015-05-01", sc, sql_context)
+    #lp_pred = get_labeled_points_last("point_label", sc, sql_context)
+    #predictions = model.transform(lp_pred)
+    #for each in predictions.map(lambda x: (x.symbol, x.date2, x.probability.toArray()[0], x.prediction)).collect():
+    #    print each[0], each[1], each[2], each[3]
+    #for cur in  get_last_days(30, sql_context):
+    #    lp_train = get_labeled_points(start1, cur, "point_label_pos", sc, sql_context)
+    #    
+    #    labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_train)
+    #    td = labelIndexer.transform(lp_train)
+    #    print sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).collect()]),
+    #            key=lambda x: x[0])
 
 
-    val(predictions)
+    #    featureIndexer = \
+    #        VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(lp_train)
 
-    for each in predictions.take(10):
-        print each
+    #    rf = get_model()
+    #    pipeline = Pipeline(stages=[labelIndexer, featureIndexer, rf])
+    #    model = pipeline.fit(lp_train) 
 
-def val(predictions):
-    acc = 0
-    all = 0
-    for each in predictions.filter(lambda x: x.probability.toArray()[1] > 0.5).collect():
-        if each.label == 1.0:
-            acc += 1
-        all += 1
-    postive65_acc = acc*1.0/all
-    print "postive65:", acc, all, postive65_acc
+
+    #    lp_pred = get_labeled_points_cur(cur, "point_label", sc, sql_context)
+    #    if lp_pred == None:
+    #        print "None"
+    #        continue
+
+    #    predictions = model.transform(lp_pred)
+    #    print cur
+    #    val(predictions)
+
+
+
+
+def get_model():
+    from pyspark.ml.classification import RandomForestClassifier,GBTClassifier,LogisticRegression,DecisionTreeClassifier
+    return DecisionTreeClassifier(labelCol="indexedLabel", featuresCol="indexedFeatures")
+
+def get_last_days(n, sql_context):
+    sqlstr = """
+        SELECT
+            date
+        FROM
+            eod_spx
+        WHERE
+            symbol = "SPX"
+        ORDER BY
+            date desc
+        LIMIT %d
+    """ % (n)
+
+    df = sql_context.sql(sqlstr)
+    return df.rdd.map(lambda x: x.date).collect()
+def val_per(predictions, label2index, threshold):
+    per =  predictions.map(lambda x: (x.probability.toArray()[label2index[1]],x.label)).persist()
+    acc =per.filter(lambda x: x[0] >= threshold).filter(lambda x: x[1] == 1.0).count()
+    all = per.filter(lambda x: x[0] >= threshold).count()
+    if all != 0: 
+        rate = acc*1.0/all
+    else:
+        rate = 0.0
+    print "postive", threshold, acc, all, rate
+
+def val(predictions, label2index):
+
+    sql_context.createDataFrame(predictions.rdd.map(lambda x: (x.symbol, x.date1, x.date2, x.date3,x.act_diff, float(x.probability.toArray()[label2index[1]]),x.indexedLabel, x.label,x.prediction)), ["symbol", "date1", "date2", "date3", "act_diff", "prob", "indexedLabel", "label", "pred"]).insertInto("check_pred", overwrite = False)
+    val_per(predictions, label2index, 0.5)
+    val_per(predictions, label2index, 0.6)
+    val_per(predictions, label2index, 0.65)
+    val_per(predictions, label2index, 0.7)
+    val_per(predictions, label2index, 0.8)
+    val_per(predictions, label2index, 0.9)
+    val_per(predictions, label2index, 0.0)
 
 if __name__ == "__main__":
     conf = SparkConf()
@@ -142,5 +254,5 @@ if __name__ == "__main__":
     sql_context = HiveContext(sc)
     sql_context.setConf("spark.sql.shuffle.partitions", "32")
     sql_context.sql("use fex")
-    main(sc, sql_context, is_hive=True)
+    main(sc, sql_context)
     sc.stop()

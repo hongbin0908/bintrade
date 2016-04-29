@@ -12,8 +12,6 @@ from pyspark.rdd import RDD
 local_path = os.path.dirname(__file__)
 
 def get_norm(sc, sql_context, is_hive):
-    if is_hive:
-        sql_context.sql(""" use fex """)
     df_norm = sql_context.sql("""
         SELECT
             symbol,
@@ -26,11 +24,21 @@ def get_norm(sc, sql_context, is_hive):
         FROM
             eod_norm
     """)
+    df_norm = sql_context.sql("""
+        SELECT
+            symbol,
+            date,
+            normopen as open,
+            normhigh as high,
+            normlow as low,
+            normclose as close,
+            volume
+        FROM
+            eod_norm
+    """)
     return df_norm
 
 def get_idx(sc, sql_context, is_hive):
-    if is_hive:
-        sql_context.sql(""" use fex """)
     df_idx = sql_context.sql("""
         SELECT
             symbol,
@@ -45,15 +53,22 @@ def get_idx(sc, sql_context, is_hive):
         WHERE
             symbol = "SPX"
     """)
+    #df_idx = sql_context.sql("""
+    #    SELECT
+    #        symbol,
+    #        date,
+    #        close AS close
+    #    FROM
+    #        idx 
+    #    WHERE
+    #        symbol = "IDXBIN2"
+    #""")
     d_idx = {}
     for each in df_idx.collect():
         d_idx[each.date] = {"symbol": each.symbol,
                       "date": each.date,
-                      "open": each.open,
-                      "high": each.high,
-                      "low": each.low,
-                      "close": each.close,
-                      "volume": each.volume}
+                      "close": each.open
+                      }
     return d_idx
 
 
@@ -64,20 +79,24 @@ def cal_per(x, d_idx):
     x.sort(lambda xx,yy: cmp(xx.date, yy.date),reverse=False)
     for i in range(0, len(x)):
         date_cur = x[i].date
-        close = x[i].adjclose / d_idx[date_cur]["open"] * 10000
+        if date_cur not in d_idx.keys():
+            assert False and date_cur
+        assert d_idx[date_cur]["close"] > 0.0 and d_idx[date_cur]
+        close = x[i].close / d_idx[date_cur]["close"] * 10000
 
-        zi = close / x[i].adjclose
-        open = zi * x[i].adjopen
-        #open = x[i].adjopen / d_idx[date_cur]["open"]*10000
-        low  = zi * x[i].adjlow
-        high = zi * x[i].adjhigh
+        zi = close / x[i].close
+        open = zi * x[i].open
+        #open = x[i].jopen / d_idx[date_cur]["open"]*10000
+        low  = zi * x[i].low
+        high = zi * x[i].high
         l.append({"symbol": x[i].symbol,
                   "date": x[i].date,
                   "open": open,
                   "low": low,
                   "high": high,
                   "close": close,
-                  "volume": x[i].volume/(d_idx[date_cur]["volume"]) * 10000
+                  "volume": 0
+                  #"volume": x[i].volume/(d_idx[date_cur]["volume"]) * 10000
                   })
     return l
 
@@ -89,8 +108,6 @@ def cal(df_norm, d_idx):
 
 
 def save(rdd_rel, sc, sql_context, is_hive):
-    if is_hive:
-        sql_context.sql("use fex")
     print rdd_rel.first()
     rddl_rel = rdd_rel.map(lambda p: (p["symbol"], p["date"], p["open"], p["high"], p["low"], p["close"],p["volume"]))
     schema = StructType([
