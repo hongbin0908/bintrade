@@ -16,10 +16,10 @@ from pyspark.sql.functions import substring
 
 
 def cal(threshold, start, end, df):
-    rdd = df.rdd.filter(lambda x: x.prob > threshold).persist()
+    rdd = df.rdd.filter(lambda x: x.prob > threshold and x.date2>=start and x.date2<end).persist()
     all = rdd.count()
     acc = rdd.filter(lambda x: x.label == 1.0).count()
-    print start, end, threshold, acc, all, acc/all
+    print start, end, threshold, acc, all, acc*1.0/all
 def main(sc, sql_context):
     sqlstr = """
         SELECT
@@ -48,6 +48,18 @@ def main(sc, sql_context):
     cal(0.6, "2015-05-01", "2016-04-01", df)
     cal(0.6, "2015-04-01", "2016-04-01", df)
 
+    cal(0.65, "2016-03-01", "2016-04-01", df)
+    cal(0.65, "2016-02-01", "2016-04-01", df)
+    cal(0.65, "2016-01-01", "2016-04-01", df)
+    cal(0.65, "2015-12-01", "2016-04-01", df)
+    cal(0.65, "2015-11-01", "2016-04-01", df)
+    cal(0.65, "2015-10-01", "2016-04-01", df)
+    cal(0.65, "2015-09-01", "2016-04-01", df)
+    cal(0.65, "2015-08-01", "2016-04-01", df)
+    cal(0.65, "2015-07-01", "2016-04-01", df)
+    cal(0.65, "2015-06-01", "2016-04-01", df)
+    cal(0.65, "2015-05-01", "2016-04-01", df)
+    cal(0.65, "2015-04-01", "2016-04-01", df)
 
 if __name__ == "__main__":
     conf = SparkConf()

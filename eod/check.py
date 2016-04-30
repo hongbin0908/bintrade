@@ -35,7 +35,7 @@ if __name__ == "__main__":
         eod_msft
     WHERE
         symbol = "MSFT"
-        AND date >= '2010-01-01'
+        AND date >= '2000-01-01'
     ORDER BY
         date asc
     """)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
             FROM
                 eod2
             WHERE
-                date >= '2010-01-01'
+                date >= '2000-01-01'
             GROUP BY
                 symbol
         ) a

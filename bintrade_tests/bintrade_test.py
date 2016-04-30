@@ -22,7 +22,7 @@ def main(sc, sql_context, is_hive):
     #post_run.main(sc, sql_context, is_hive = True)
     #mat_close.main(sc, sql_context, is_hive = True)
     #adx.main(sc, sql_context, is_hive = True)
-    #feature.main(10, 1, sc, sql_context, is_hive = True)
+    feature.main(10, 1, sc, sql_context, is_hive = True)
     train.main("2010-01-01", "2010-04-30", "2010-05-01", "9999-99-99", sc, sql_context, is_hive=True)
 if __name__ == "__main__":
     conf = SparkConf()

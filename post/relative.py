@@ -1,6 +1,6 @@
 import os, sys
 
-from pyspark import SparkConf
+from pyspark import SparkConf,SparkContext
 from pyspark.sql import HiveContext
 from pyspark.sql.functions import *
 from pyspark.sql.types import StringType
@@ -8,6 +8,7 @@ from pyspark.sql.types import FloatType
 from pyspark.sql.types import StructType
 from pyspark.sql.types import StructField
 from pyspark.rdd import RDD
+from lib.datelib import *
 
 local_path = os.path.dirname(__file__)
 
@@ -38,6 +39,16 @@ def get_norm(sc, sql_context, is_hive):
     """)
     return df_norm
 
+def cal_value(x):
+    assert len(x) > 0
+    x.sort(lambda xx,yy: cmp(xx.date, yy.date), reverse = False)
+    l = []
+    for i in range(1, len(x)):
+        dx = x[i].asDict()
+        dx["value"] = x[i].open
+        l.append(dx)
+    return l
+
 def get_idx(sc, sql_context, is_hive):
     df_idx = sql_context.sql("""
         SELECT
@@ -52,6 +63,8 @@ def get_idx(sc, sql_context, is_hive):
             eod_spx
         WHERE
             symbol = "SPX"
+        ORDER BY
+            date
     """)
     #df_idx = sql_context.sql("""
     #    SELECT
@@ -63,11 +76,18 @@ def get_idx(sc, sql_context, is_hive):
     #    WHERE
     #        symbol = "IDXBIN2"
     #""")
+
+    df_idx = df_idx.withColumn("value", df_idx.close * 0)\
+          .rdd.groupBy(lambda x: x.symbol)\
+          .map(lambda x: (x[0], list(x[1])))\
+          .flatMapValues(lambda x: cal_value(x))\
+          .map(lambda x: x[1])
+    print df_idx.first()
     d_idx = {}
     for each in df_idx.collect():
-        d_idx[each.date] = {"symbol": each.symbol,
-                      "date": each.date,
-                      "close": each.open
+        d_idx[each["date"]] = {"symbol": each["symbol"],
+                      "date": each["date"],
+                      "value": each["value"]
                       }
     return d_idx
 
@@ -81,8 +101,8 @@ def cal_per(x, d_idx):
         date_cur = x[i].date
         if date_cur not in d_idx.keys():
             assert False and date_cur
-        assert d_idx[date_cur]["close"] > 0.0 and d_idx[date_cur]
-        close = x[i].close / d_idx[date_cur]["close"] * 10000
+        assert d_idx[date_cur]["value"] > 0.0 and d_idx[date_cur]
+        close = x[i].close / d_idx[date_cur]["value"] * 10000
 
         zi = close / x[i].close
         open = zi * x[i].open
@@ -158,5 +178,6 @@ if __name__ == "__main__":
     conf.set("spark.executor.memory", "8g")
     sc = SparkContext(appName="bintrade.post.index", conf=conf)
     sql_context = HiveContext(sc)
+    sql_context.sql(""" use fex """)
     main(sc, sql_context, is_hive=True)
     sc.stop()

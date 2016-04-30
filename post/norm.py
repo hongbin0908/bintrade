@@ -49,7 +49,7 @@ def cal_adj(sc, sql_context, is_hive):
         FROM
             eod2
         WHERE
-            date >= "2010-01-01"
+            date >= "2000-01-01"
     """)
 
     return df_eod.rdd.map(lambda x: cal_adj_per(x))
