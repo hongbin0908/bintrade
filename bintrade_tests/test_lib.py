@@ -11,6 +11,30 @@ from pyspark import SQLContext,HiveContext
 from pyspark import SparkContext, SparkConf
 from pyspark.sql.types import StructType,StructField,StringType,IntegerType,FloatType,DoubleType,LongType,MapType
 
+def get_spark():
+    conf = SparkConf()
+    conf.set("spark.executor.instances", "4")
+    conf.set("spark.executor.cores", "4")
+    conf.set("spark.executor.memory", "16g")
+    sc = SparkContext(appName="youzan-algrithm", conf=conf)
+    sql_context = HiveContext(sc)
+    sql_context.sql(""" use fex """)
+    sql_context.setConf("spark.sql.shuffle.partitions", "64")
+
+    return sc, sql_context
+
+def dfToCsv(df, path):
+    f = open(path, "w")
+    columns = df.columns
+    for each in columns:
+        print >>f, "%s," % each,
+    print >> f
+    for each in df.collect():
+        d = each.asDict()
+        for name in columns:
+            print >> f, "%s," % d[name],
+        print >> f
+        
 def dfToTable(sql_context, df, tableName, overwrite = True, force = True):
     if overwrite == False:
         force = False

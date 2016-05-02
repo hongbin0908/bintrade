@@ -91,7 +91,7 @@ def run(start1, end1, start2, end2, sc, sql_context):
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_data)
     td = labelIndexer.transform(lp_data)
     label2index = {}
-    for each in  sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).collect()]),
+    for each in  sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).take(100)]),
                 key=lambda x: x[0]):
         label2index[int(each[0])] = int(each[1])
     print label2index
@@ -208,13 +208,13 @@ def val(predictions, label2index, sql_context):
     
     dfToTable(sql_context, df, "check_pred", overwrite = False) 
 
-    val_per(predictions, label2index, 0.5)
-    val_per(predictions, label2index, 0.6)
-    val_per(predictions, label2index, 0.65)
-    val_per(predictions, label2index, 0.7)
-    val_per(predictions, label2index, 0.8)
-    val_per(predictions, label2index, 0.9)
-    val_per(predictions, label2index, 0.0)
+    #val_per(predictions, label2index, 0.5)
+    #val_per(predictions, label2index, 0.6)
+    #val_per(predictions, label2index, 0.65)
+    #val_per(predictions, label2index, 0.7)
+    #val_per(predictions, label2index, 0.8)
+    #val_per(predictions, label2index, 0.9)
+    #val_per(predictions, label2index, 0.0)
 
 if __name__ == "__main__":
     conf = SparkConf()
