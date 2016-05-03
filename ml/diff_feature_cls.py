@@ -322,8 +322,8 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     lp_cur = lp_data.filter(lp_data.is_labeled==0)
     predictions = model.transform(lp_cur)
     predictions = sql_context.createDataFrame(predictions.rdd.map(lambda x: cal_prob(x, label2index)))
-    predictions = predictions.sort(prediction.prob.desc())
-    dfToCsv(prediction, fout)
+    predictions = predictions.sort(predictions.prob.desc())
+    dfToCsv(predictions, fout)
 def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
     lp = cal_feature(df, window, coach, 1.00).persist()
