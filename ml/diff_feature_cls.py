@@ -12,6 +12,7 @@ local_path = os.path.dirname(__file__)
 def cal_feature_per(x, window, coach, threshold):
     assert window >= 2
     assert len(x) > 0
+    l = []
     x.sort(lambda xx,yy: cmp(xx.date, yy.date),reverse=False)
 
     for i in range(0, len(x) - window):

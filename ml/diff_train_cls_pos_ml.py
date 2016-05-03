@@ -202,19 +202,10 @@ def cal_prob(x,label2index):
     dx["probability"] = str(dx["probability"].toArray().tolist())
     dx["rawPrediction"] = str(dx["rawPrediction"].toArray().tolist())
     return dx
+
 def val(predictions, label2index, sql_context):
     df = sql_context.createDataFrame(predictions.rdd.map(lambda x: cal_prob(x, label2index)))
-    print df.count()
-    
-    dfToTable(sql_context, df, "check_pred", overwrite = False) 
-
-    #val_per(predictions, label2index, 0.5)
-    #val_per(predictions, label2index, 0.6)
-    #val_per(predictions, label2index, 0.65)
-    #val_per(predictions, label2index, 0.7)
-    #val_per(predictions, label2index, 0.8)
-    #val_per(predictions, label2index, 0.9)
-    #val_per(predictions, label2index, 0.0)
+    dfToTable(sql_context, df, "check_pred", overwrite = False)
 
 if __name__ == "__main__":
     conf = SparkConf()
