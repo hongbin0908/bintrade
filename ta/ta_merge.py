@@ -35,7 +35,7 @@ def main(sc, sqlContext):
     df_sym.registerTempTable("tmp_sym")
 
     df = sql_context.sql("""
-        SELECT 
+        SELECT
             e.*,
             s.id,
             s.id_num,
@@ -78,8 +78,6 @@ def main(sc, sqlContext):
         WHERE
             d.mat_dual > 0
             AND a.adx > 0
-            AND ub.label >= 0
-            
     """)
 
     dfToTable(sql_context, df, "ta_merge")

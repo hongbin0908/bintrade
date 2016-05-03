@@ -12,12 +12,22 @@ def cal(threshold, start, end, df):
     #print acc,"\t", round(acc*1.0/all,2),
     #acc = rdd.filter(lambda x: x.close2/x.spxopen2>x.close1/x.spxopen1).count()
     #print acc,"\t", round(acc*1.0/all,2)
-
     print start,"\t", end,"\t", threshold,"\t", acc,"\t", all, "\t", round(acc*1.0/all,4), "\t", acc2,"\t", round(acc2*1.0/all,4)
 
 def main(sc, sql_context):
 
+    df_diff = sql_context.sql("""
+        SELECT
+            date,
+            sum(if(diffclose > 1, 1 , 0)) AS pos,
+            sum(if(diffclose <= 1, 1 , 0)) AS neg
+        FROM
+            ta_diff_5
+        GROUP BY
+            date
+    """)
 
+    df_diff.registerTempTable("tmp_df_diff")
 
     df = sql_context.sql("""
         SELECT
@@ -33,7 +43,9 @@ def main(sc, sql_context):
             spx1.open as spxopen1,
             spx2.open as spxopen2,
             e1.adjclose AS close1,
-            e2.adjclose AS close2
+            e2.adjclose AS close2,
+            diff.pos AS num_pos,
+            diff.neg AS num_neg
         FROM 
             check_pred p
         LEFT JOIN 
@@ -64,6 +76,10 @@ def main(sc, sql_context):
             eod_spx spx2
         ON
             p.date3 = spx2.date
+        LEFT JOIN
+            tmp_df_diff diff
+        ON
+            p.date3= diff.date
     """)
     
 

@@ -15,7 +15,7 @@ def get_spark():
     conf = SparkConf()
     conf.set("spark.executor.instances", "4")
     conf.set("spark.executor.cores", "4")
-    conf.set("spark.executor.memory", "16g")
+    conf.set("spark.executor.memory", "32g")
     sc = SparkContext(appName="youzan-algrithm", conf=conf)
     sql_context = HiveContext(sc)
     sql_context.sql(""" use fex """)
@@ -34,7 +34,7 @@ def dfToCsv(df, path):
         for name in columns:
             print >> f, "%s," % d[name],
         print >> f
-        
+
 def dfToTable(sql_context, df, tableName, overwrite = True, force = True):
     if overwrite == False:
         force = False
@@ -66,7 +66,7 @@ def dfToTable(sql_context, df, tableName, overwrite = True, force = True):
 
     sql_context.sql(sqlstr)
     df.insertInto(tableName, overwrite)
-    
+
 
 
 if __name__ == '__main__':
