@@ -11,11 +11,11 @@ from pyspark import SQLContext,HiveContext
 from pyspark import SparkContext, SparkConf
 from pyspark.sql.types import StructType,StructField,StringType,IntegerType,FloatType,DoubleType,LongType,MapType
 
-def get_spark():
+def get_spark(num =4 , cores =4 , mem = "32g"):
     conf = SparkConf()
-    conf.set("spark.executor.instances", "4")
-    conf.set("spark.executor.cores", "4")
-    conf.set("spark.executor.memory", "32g")
+    conf.set("spark.executor.instances", "%d"%  num)
+    conf.set("spark.executor.cores", "%d" % cores)
+    conf.set("spark.executor.memory", "%s" % mem)
     sc = SparkContext(appName="youzan-algrithm", conf=conf)
     sql_context = HiveContext(sc)
     sql_context.sql(""" use fex """)

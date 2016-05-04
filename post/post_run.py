@@ -14,12 +14,10 @@ from pyspark import SparkContext
 
 from post import norm, index, relative
 
-
 def main(sc, sql_context, is_hive):
     norm.main(sc, sql_context, is_hive = True)
     index.main(sc, sql_context, is_hive = True)
     relative.main(sc, sql_context, is_hive = True)
-
 
 if __name__ == "__main__":
     conf = SparkConf()

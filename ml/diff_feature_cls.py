@@ -43,18 +43,18 @@ def cal_feature_per(x, window, coach, threshold):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].close / x[i+j-20].close,2))
         #    idx += 1
-        #for j in range(1, window+1):
-        #    l_idx.append(idx)
-        #    l_feature.append( round(x[i+j].spxopen / x[i+j-1].spxopen,2))
-        #    idx += 1
+        for j in range(1, window+1):
+            l_idx.append(idx)
+            l_feature.append( round(x[i+j].spxopen / x[i+j-1].spxopen,2))
+            idx += 1
         #for j in range(2, window+1):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].spxopen / x[i+j-2].spxopen,2))
         #    idx += 1
-        #for j in range(1, window+1):
-        #    l_idx.append(idx)
-        #    l_feature.append( round(x[i+j].spxclose / x[i+j-1].spxclose,2))
-        #    idx += 1
+        for j in range(1, window+1):
+            l_idx.append(idx)
+            l_feature.append( round(x[i+j].spxclose / x[i+j-1].spxclose,2))
+            idx += 1
         #for j in range(2, window+1):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].spxclose / x[i+j-2].spxclose,2))
