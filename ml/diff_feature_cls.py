@@ -20,9 +20,9 @@ def cal_feature_per(x, window, coach, threshold):
         l_feature = []
         idx = 0
 
-        #l_idx.append(x[i].id)
-        #l_feature.append(1)
-        #idx = x[i].id_num
+        l_idx.append(x[i].id)
+        l_feature.append(1)
+        idx = x[i].id_num
 
         for j in range(1, window+1):
             l_idx.append(idx)
