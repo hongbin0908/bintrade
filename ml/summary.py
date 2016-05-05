@@ -3,16 +3,36 @@ from pyspark.sql.functions import substring
 from bintrade_tests.test_lib import *
 
 
-def cal(threshold, start, end, df):
+def cal_(threshold, start, end, df):
     rdd = df.rdd.filter(lambda x: x.prob > threshold and x.date2>=start and x.date2<end).persist()
+    assert rdd.filter(lambda x: x.label == 1.0 and x.relclose2 < x.relclose1).count() == 0
     all = rdd.count()
     acc = rdd.filter(lambda x: x.label == 1.0).count()
-    acc2 = rdd.filter(lambda x: x.close2>x.close1).count()
+    #acc2 = rdd.filter(lambda x: x.close2>=x.close1).count()
+
+    return (acc, all)
+
+def cal(threshold, start, end, df):
+    acc, all = cal_(threshold, start, end,df)
+    acc_w, all_w = cal_(0.0, start, end,df)
+    if all > 0:
+        print "%f\t%d\t%d\t%f\\%f" % (threshold, acc, all, acc*1.0/all, acc_w*1.0/all_w)
+    else:
+        print "%f\t%d\t%d\t%f\\%f" % (threshold, acc, all, 0.0, 0.0)
+
+    
+
     #acc = rdd.filter(lambda x: x.relclose2>x.relclose1).count()
     #print acc,"\t", round(acc*1.0/all,2),
     #acc = rdd.filter(lambda x: x.close2/x.spxopen2>x.close1/x.spxopen1).count()
     #print acc,"\t", round(acc*1.0/all,2)
-    print start,"\t", end,"\t", threshold,"\t", acc,"\t", all, "\t", round(acc*1.0/all,4), "\t", acc2,"\t", round(acc2*1.0/all,4)
+    #rdd_whole = df.rdd.filter(lambda x: x.prob > 0.0 and x.date2>=start and x.date2<end).persist()
+    #all_whole = rdd_whole.count()
+    #acc_whole = rdd_whole.filter(lambda x: x.label == 1.0).count()
+    #acc2_whole = rdd_whole.filter(lambda x: x.close2>x.close1).count()
+    #print start,"\t", end,"\t", threshold,"\t", \
+    #      acc,"      \t", all,       "\t", round(acc*1.0/all,4),             "\t", acc2,      "\t", round(acc2*1.0/all,4),\
+    #      acc_whole,"\t", all_whole, "\t", round(acc_whole*1.0/all_whole,4), "\t", acc2_whole,"\t", round(acc2_whole*1.0/all_whole,4)
 
 def main(sc, sql_context):
 
@@ -85,6 +105,8 @@ def main(sc, sql_context):
 
 
     cal(0.6, "2015-04-01", "2016-04-01", df)
+    cal(0.65, "2015-04-01", "2016-04-01", df)
+    cal(0.7, "2015-04-01", "2016-04-01", df)
     cal(0.6, "2016-03-01", "2016-04-01", df)
     cal(0.6, "2016-02-01", "2016-03-01", df)
     cal(0.6, "2016-01-01", "2016-02-01", df)

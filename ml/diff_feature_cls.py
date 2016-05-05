@@ -9,6 +9,9 @@ from bintrade_tests.test_lib import *
 
 local_path = os.path.dirname(__file__)
 
+def get_cur():
+    return "2016-05-04"
+
 def cal_feature_per(x, window, coach, threshold):
     assert window >= 2
     assert len(x) > 0
@@ -47,18 +50,18 @@ def cal_feature_per(x, window, coach, threshold):
             l_idx.append(idx)
             l_feature.append( round(x[i+j].spxopen / x[i+j-1].spxopen,2))
             idx += 1
-        #for j in range(2, window+1):
-        #    l_idx.append(idx)
-        #    l_feature.append( round(x[i+j].spxopen / x[i+j-2].spxopen,2))
-        #    idx += 1
+        for j in range(2, window+1):
+            l_idx.append(idx)
+            l_feature.append( round(x[i+j].spxopen / x[i+j-2].spxopen,2))
+            idx += 1
         for j in range(1, window+1):
             l_idx.append(idx)
             l_feature.append( round(x[i+j].spxclose / x[i+j-1].spxclose,2))
             idx += 1
-        #for j in range(2, window+1):
-        #    l_idx.append(idx)
-        #    l_feature.append( round(x[i+j].spxclose / x[i+j-2].spxclose,2))
-        #    idx += 1
+        for j in range(2, window+1):
+            l_idx.append(idx)
+            l_feature.append( round(x[i+j].spxclose / x[i+j-2].spxclose,2))
+            idx += 1
         #for j in range(1, window+1):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].spxhigh / x[i+j].spxlow,2))
@@ -75,20 +78,20 @@ def cal_feature_per(x, window, coach, threshold):
             #l_idx.append(idx)
             #l_feature.append( round(x[i+j].pdi14 / x[i+j].mdi14,2))
             #idx += 1
-        #l_idx.append(idx)
-        ##l_feature.append( round(x[i+window].mat_dual,4))
-        #l_feature.append(round(x[i+window].mat_dual,2))
-        #idx += 1
-        #l_idx.append(idx)
-        ##l_feature.append( round(x[i+window].pdi14 / x[i+window].mdi14,2))
+        l_idx.append(idx)
+        #l_feature.append( round(x[i+window].mat_dual,4))
+        l_feature.append(round(x[i+window].mat_dual,2))
+        idx += 1
+        l_idx.append(idx)
         #l_feature.append( round(x[i+window].pdi14 / x[i+window].mdi14,2))
-        #idx += 1
-        #l_idx.append(idx)
-        #l_feature.append( int(x[i+window].adx/30))
-        #idx += 1
-        #l_idx.append(idx)
-        #l_feature.append( x[i+window].gupbreak)
-        #idx += 1
+        l_feature.append( round(x[i+window].pdi14 / x[i+window].mdi14,2))
+        idx += 1
+        l_idx.append(idx)
+        l_feature.append( int(x[i+window].adx/30))
+        idx += 1
+        l_idx.append(idx)
+        l_feature.append( x[i+window].gupbreak)
+        idx += 1
 
 
         cls = 0
@@ -139,13 +142,13 @@ def get_lp(sc, sql_context, is_hive):
 
 
 def cal_feature(df, window, coach, threshold):
-    return df.rdd.groupBy(lambda x: x.symbol).map(lambda x : (x[0], list(x[1])))\
-                     .flatMapValues(lambda x: cal_feature_per(x, window, coach, threshold))\
-                     .map(lambda x: x[1])
+    return df.rdd.groupBy(lambda x: x.symbol)\
+             .map(lambda x : (x[0], list(x[1])))\
+             .flatMapValues(lambda x: cal_feature_per(x, window, coach, threshold))\
+             .map(lambda x: x[1])
 
 
 def save(lp, table_name, sql_context, is_hive):
-
     df = sql_context.createDataFrame(lp)
     print df.first()
     dfToTable(sql_context, df, table_name)
@@ -157,7 +160,7 @@ def get_labeled_points(start, end, df, sc, sql_context):
 def get_labeled_points_last(df, sc, sql_context):
     df =  df.filter(df.is_labeled == 0).withColumn("label", df.label*0)
     df.registerTempTable("tmp_df")
-    df = df.filter(df.date2 == '2016-05-02')
+    df = df.filter(df.date2 == get_cur())
     return df
 
 
@@ -187,7 +190,7 @@ def val(predictions, label2index, sql_context):
 
 def get_model():
     from pyspark.ml.classification import RandomForestClassifier,GBTClassifier,LogisticRegression,DecisionTreeClassifier,NaiveBayes
-    #return RandomForestClassifier(numTrees = 40, maxDepth=5, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
+    #return RandomForestClassifier(numTrees = 4, maxDepth=10, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
     return DecisionTreeClassifier(maxDepth=5, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
     #return LogisticRegression(maxIter = 1000000,labelCol="indexedLabel", featuresCol="indexedFeatures")
 
@@ -196,7 +199,7 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     lp_data= get_labeled_points(start1, end2, df, sc, sql_context)
     print lp_data.count()
     lp_data_cur= get_labeled_points_last(df, sc, sql_context)
-    lp_data = lp_data.unionAll(lp_data_cur).persist()
+    lp_data = lp_data.unionAll(lp_data_cur).cache()
     print lp_data.count()
 
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_data)
@@ -228,19 +231,18 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     dfToCsv(predictions, fout)
 def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    lp = cal_feature(df, window, coach, 1.00).persist()
+    lp = cal_feature(df, window, coach, 1.00).cache()
     print lp.count()
     lp = sql_context.createDataFrame(lp)
     sql_context.sql("""
     DROP TABLE IF EXISTS %s
     """ % "check_pred")
-    run("2000-10-01","2015-10-01","2015-10-01", "2016-04-01",lp, sc, sql_context, "pred_2016-05-02.1.csv")
+    run("2000-10-01","2015-10-01","2015-10-01", "2016-04-01",lp, sc, sql_context, "pred_%s.1.csv" % get_cur())
 
-    run("2000-04-01","2015-04-01","2015-04-01", "2016-10-01",lp, sc, sql_context, "pred_2016-05-02.2.csv")
-    #save(lp, "point_label", sql_context, is_hive)
+    run("2000-04-01","2015-04-01","2015-04-01", "2016-10-01",lp, sc, sql_context, "pred_%s.2.csv" % get_cur())
 
 
 if __name__ == "__main__":
     sc, sql_context = get_spark()
-    main(60, 4, sc, sql_context, is_hive=True)
+    main(30, 1, sc, sql_context, is_hive=True)
     sc.stop()

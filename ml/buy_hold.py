@@ -7,7 +7,7 @@ def get_table_name():
     return "check_pred_buy_and_hold"
 
 
-def get_lp(sc, sql_context, is_hive):
+def get_lp(sc, sql_context):
     df_lp = sql_context.read.table("ta_merge")
     return df_lp
 
@@ -55,14 +55,14 @@ def get_labeled_points(start, end, df, sc, sql_context):
     return df.filter(df.date1 >= start).filter(df.date3<end).filter(df.label != -1)
 
 def val(predictions, sql_context):
-    dfToTable(sql_context, df, get_table_name(), overwrite = False)
+    dfToTable(sql_context, predictions, get_table_name(), overwrite = False)
 
 def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     lp_data= get_labeled_points(start1, end2, df, sc, sql_context)
 
     lp_train = lp_data.filter(lp_data.date3<end1).filter(lp_data.is_labeled == 1)
     lp_check = lp_data.filter(lp_data.date2>start2).filter(lp_data.is_labeled == 1)
-    predictions = lp_check.witchColumn("prob", "1.0")
+    predictions = lp_check.withColumn("prob", lp_check.label * 0.0 + 1.0)
     val(predictions, sql_context)
 
 def main(window, coach, sc, sql_context):

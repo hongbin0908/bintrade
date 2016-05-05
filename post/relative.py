@@ -29,10 +29,10 @@ def get_norm(sc, sql_context, is_hive):
         SELECT
             symbol,
             date,
-            normopen as open,
-            normhigh as high,
-            normlow as low,
-            normclose as close,
+            adjopen as open,
+            adjhigh as high,
+            adjlow as low,
+            adjclose as close,
             volume
         FROM
             eod_norm
@@ -102,7 +102,8 @@ def cal_per(x, d_idx):
         if date_cur not in d_idx.keys():
             assert False and date_cur
         assert d_idx[date_cur]["value"] > 0.0 and d_idx[date_cur]
-        close = x[i].close / d_idx[date_cur]["value"] * 10000
+        #close = x[i].close / d_idx[date_cur]["value"] * 10000
+        close = x[i].close / 1.0
 
         zi = close / x[i].close
         open = zi * x[i].open
