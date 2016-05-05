@@ -23,6 +23,15 @@ def get_spark(num =4 , cores =4 , mem = "32g"):
 
     return sc, sql_context
 
+def get_spark_test():
+    conf = SparkConf()
+    sc = SparkContext("local[4]", appName="youzan-algrithm", conf=conf)
+    sql_context = HiveContext(sc)
+    sql_context.sql(""" use fex_test """)
+    sql_context.setConf("spark.sql.shuffle.partitions", "1")
+
+    return sc, sql_context
+
 def dfToCsv(df, path):
     f = open(path, "w")
     columns = df.columns
