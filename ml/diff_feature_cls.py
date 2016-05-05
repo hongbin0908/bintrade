@@ -31,6 +31,7 @@ def cal_feature_per(x, window, coach, threshold):
             l_idx.append(idx)
             #l_feature.append( round(x[i+j].close / x[i+j-1].close,2))
             l_feature.append( round(x[i+j].close / x[i+j-1].close,2))
+            print x[i+j].date
             #l_feature.append( round(x[i+window].close / x[j].close,2))
             idx += 1
             #l_idx.append(idx)
@@ -123,6 +124,8 @@ def cal_feature_per(x, window, coach, threshold):
         dx["features"] = Vectors.sparse(idx, l_idx, l_feature)
         #dx["features_body"] = str(l_feature)
         l.append(dx)
+        print "date2:", dx["date2"]
+        print "date3:", dx["date3"]
 
     return l
 
@@ -205,7 +208,7 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_data)
     td = labelIndexer.transform(lp_data)
     label2index = {}
-    for each in  sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).take(100)]),
+    for each in  sorted(set([(i[0], i[1]) for i in td.select(td.label, td.indexedLabel).distinct().collect()]),
                 key=lambda x: x[0]):
         label2index[int(each[0])] = int(each[1])
     print label2index
@@ -229,8 +232,12 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
     predictions = sql_context.createDataFrame(predictions.rdd.map(lambda x: cal_prob2(x, label2index)))
     predictions = predictions.sort(predictions.prob.desc())
     dfToCsv(predictions, fout)
+
+    for each in predictions.take(10):
+        print each
 def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
+    print df.count()
     lp = cal_feature(df, window, coach, 1.00).cache()
     print lp.count()
     lp = sql_context.createDataFrame(lp)
@@ -244,5 +251,5 @@ def main(window, coach, sc, sql_context, is_hive = True):
 
 if __name__ == "__main__":
     sc, sql_context = get_spark()
-    main(30, 1, sc, sql_context, is_hive=True)
+    main(7, 1, sc, sql_context, is_hive=True)
     sc.stop()
