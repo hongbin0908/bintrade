@@ -142,7 +142,7 @@ def cal_index_per(x):
         l.append(dx)
     return l
 def get_lp(sc, sql_context, is_hive):
-    df_lp = sql_context.read.table("ta_merge")
+    df_lp = sql_context.read.table("ta_merge").limit(1000)
     return df_lp
 
 
@@ -216,8 +216,16 @@ def main(window, coach, sc, sql_context, is_hive = True):
     lp = cal_feature(df, window, coach, get_buffer()).cache()
     lp = sql_context.createDataFrame(lp)
     first = lp.first()
+    row_num = lp.count()
+    col_num = len(first.features)
     print first.features
     print len(first.features)
+    npFeat = np.empty([row_num, col_num], dtype=float)
+    lpLocal =  lp.collect()
+    for i in range(0, row_num):
+        for j in range(0, col_num):
+            npFeat[i][j] = lpLocal[i].features[j]
+    print npFeat
 
 
 if __name__ == "__main__":
