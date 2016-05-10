@@ -19,7 +19,7 @@ def get_spark(num =4 , cores =4 , mem = "32g"):
     sc = SparkContext(appName="youzan-algrithm", conf=conf)
     sql_context = HiveContext(sc)
     sql_context.sql(""" use fex """)
-    sql_context.setConf("spark.sql.shuffle.partitions", "64")
+    sql_context.setConf("spark.sql.shuffle.partitions", "16")
 
     return sc, sql_context
 
@@ -44,6 +44,51 @@ def dfToCsv(df, path):
             print >> f, "%s," % d[name],
         print >> f
 
+
+def table_type2string(dataType):
+    if isinstance(dataType, StringType):
+        return "string"
+    elif isinstance(dataType, FloatType):
+        return "float"
+    elif isinstance(dataType, DoubleType):
+        return "double"
+    elif isinstance(dataType, LongType):
+        return "bigint"
+    elif isinstance(dataType, IntegerType):
+        return "int"
+    else:
+        print "Unknonw " + dataType
+        assert False
+
+
+def dfToTableWithPar(sql_context, df, tableName, par):
+    sqlstr = "CREATE TABLE if NOT EXISTS %s (\n" % tableName
+    selectstr = ""
+    for each in df.schema.fields:
+        sqlstr +="\t" +  each.name
+        sqlstr += "\t"+table_type2string(each.dataType)+",\n"
+        selectstr += each.name + ", "
+    sqlstr = sqlstr[: len(sqlstr)-2]
+    sqlstr += "\n) "
+    sqlstr += "partitioned by(par string)"
+    sqlstr += "stored as orc"
+    print sqlstr
+
+    sql_context.sql(sqlstr)
+    df.registerTempTable("tmp" + tableName)
+    selectstr = selectstr[0:len(selectstr)-2]
+    sqlstr = """
+    INSERT OVERWRITE table %s partition(par='%s')
+    SELECT
+        %s
+    from
+        tmp%s
+    """ % (tableName, par, selectstr, tableName)
+    print sqlstr
+    sql_context.sql(sqlstr)
+
+
+
 def dfToTable(sql_context, df, tableName, overwrite = True, force = True):
     if overwrite == False:
         force = False
@@ -54,21 +99,7 @@ def dfToTable(sql_context, df, tableName, overwrite = True, force = True):
     sqlstr = "CREATE TABLE if NOT EXISTS %s (\n" % tableName
     for each in df.schema.fields:
         sqlstr +="\t" +  each.name
-        if isinstance(each.dataType, StringType):
-            sqlstr += "\tstring,\n"
-        elif isinstance(each.dataType, FloatType):
-            sqlstr += "\tfloat,\n"
-        elif isinstance(each.dataType, DoubleType):
-            sqlstr += "\tdouble,\n"
-        elif isinstance(each.dataType, LongType):
-            sqlstr += "\tbigint,\n"
-        elif isinstance(each.dataType, IntegerType):
-            sqlstr += "\tint,\n"
-        elif isinstance(each.dataType, MapType):
-            sqlstr += "\tmap<int, double>,\n"
-        else:
-            print "Unknonw " + each.dataType
-            assert False
+        sqlstr += "\t"+table_type2string(each.dataType)+",\n"
     sqlstr = sqlstr[: len(sqlstr)-2]
     sqlstr += "\n) stored as orc"
     print sqlstr
@@ -90,19 +121,12 @@ if __name__ == '__main__':
     #print json.loads("""{1:1}""")
     sc = SparkContext("local[1]", appName="bintrade.ml.diff_feature")
     sql_context = HiveContext(sc)
-    sql_context.sql(""" use fex """)
+    sql_context.sql(""" use fex_test """)
     sql_context.setConf("spark.sql.shuffle.partitions", "1")
 
 
-    ldict = [{"symbol":"AAA", "amap":{1:1.0,2:2.1}, "date":"2010-01-01", "close":1.0}, {"symbol":"AAA","date":"2010-01-01", "close":1.0}]
+    ldict = [{"symbol":"AAA", "date":"2010-01-01", "close":1.0}, {"symbol":"AAA","date":"2010-01-01", "close":1.0}]
 
     df = sql_context.createDataFrame(ldict)
-    print df.first()
-    sql_context.sql("""use fex""")
-    sql_context.sql("""
-        DROP TABLE IF EXISTS %s
-    """ % 'test_eod_AAA')
-    #sql_context.sql("create table test_eod_AAA (symbol string, date string, close float) stored as orc")
-    #df.write.format("orc").insertInto("test_eod_AAA",True)
-    dfToTable(sql_context, df, "test_eod_AAA", overwrite = True)
+    dfToTableWithPar(sql_context, df,  "test_eod_AAA")
 

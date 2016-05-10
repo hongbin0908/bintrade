@@ -10,7 +10,7 @@ from bintrade_tests.test_lib import *
 local_path = os.path.dirname(__file__)
 
 def get_cur():
-    return "2016-05-04"
+    return "2016-05-06"
 
 def cal_feature_per(x, window, coach, threshold):
     assert window >= 2
@@ -22,16 +22,15 @@ def cal_feature_per(x, window, coach, threshold):
         l_idx = []
         l_feature = []
         idx = 0
-
-        l_idx.append(x[i].id)
-        l_feature.append(1)
-        idx = x[i].id_num
+        #l_idx.append(x[i].id)
+        #l_feature.append(1)
+        #idx = x[i].id_num
 
         for j in range(1, window+1):
             l_idx.append(idx)
             #l_feature.append( round(x[i+j].close / x[i+j-1].close,2))
             l_feature.append( round(x[i+j].close / x[i+j-1].close,2))
-            print x[i+j].date
+            #print x[i+j].date
             #l_feature.append( round(x[i+window].close / x[j].close,2))
             idx += 1
             #l_idx.append(idx)
@@ -47,38 +46,40 @@ def cal_feature_per(x, window, coach, threshold):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].close / x[i+j-20].close,2))
         #    idx += 1
-        for j in range(1, window+1):
-            l_idx.append(idx)
-            l_feature.append( round(x[i+j].spxopen / x[i+j-1].spxopen,2))
-            idx += 1
-        for j in range(2, window+1):
-            l_idx.append(idx)
-            l_feature.append( round(x[i+j].spxopen / x[i+j-2].spxopen,2))
-            idx += 1
-        for j in range(1, window+1):
-            l_idx.append(idx)
-            l_feature.append( round(x[i+j].spxclose / x[i+j-1].spxclose,2))
-            idx += 1
-        for j in range(2, window+1):
-            l_idx.append(idx)
-            l_feature.append( round(x[i+j].spxclose / x[i+j-2].spxclose,2))
-            idx += 1
-        #for j in range(1, window+1):
+        #
+        #start = window 
+        #for j in range(start, window+1):
+        #    l_idx.append(idx)
+        #    l_feature.append( round(x[i+j].spxopen / x[i+j-1].spxopen,2))
+        #    idx += 1
+        #for j in range(start, window+1):
+        #    l_idx.append(idx)
+        #    l_feature.append( round(x[i+j].spxopen / x[i+j-2].spxopen,2))
+        #    idx += 1
+        #for j in range(start, window+1):
+        #    l_idx.append(idx)
+        #    l_feature.append( round(x[i+j].spxclose / x[i+j-1].spxclose,2))
+        #    idx += 1
+        #for j in range(start, window+1):
+        #    l_idx.append(idx)
+        #    l_feature.append( round(x[i+j].spxclose / x[i+j-2].spxclose,2))
+        #    idx += 1
+        #for j in range(start, window+1):
         #    l_idx.append(idx)
         #    l_feature.append( round(x[i+j].spxhigh / x[i+j].spxlow,2))
         #    idx += 1
-        #for j in range(1, window+1):
-        #    l_idx.append(idx)
-        #    if x[i+j].adx > 30 and x[i+j].pdi14 > x[i+j].mdi14:
-        #        l_feature.append(1.0)
-        #    else:
-        #        l_feature.append(0.0)
-        #    #l_feature.append( round(x[i+j].adx, 2))
-        #    idx += 1
+        for j in range(1, window+1):
+            l_idx.append(idx)
+            if x[i+j].adx > 30 and x[i+j].pdi14 > x[i+j].mdi14:
+                l_feature.append(1.0)
+            else:
+                l_feature.append(0.0)
+            #l_feature.append( round(x[i+j].adx, 2))
+            idx += 1
 
-            #l_idx.append(idx)
-            #l_feature.append( round(x[i+j].pdi14 / x[i+j].mdi14,2))
-            #idx += 1
+            l_idx.append(idx)
+            l_feature.append( round(x[i+j].pdi14 / x[i+j].mdi14,2))
+            idx += 1
         l_idx.append(idx)
         #l_feature.append( round(x[i+window].mat_dual,4))
         l_feature.append(round(x[i+window].mat_dual,2))
@@ -99,7 +100,7 @@ def cal_feature_per(x, window, coach, threshold):
         is_labeled = 1
         act_diff = -1.0
         if i+window+coach >= len(x):
-            cls = -1 # no labels
+            cls = 1 # no labels
             date3 = ""
             is_labeled = 0
         elif x[i+window+coach].close / x[i+window].close >= threshold :
@@ -124,8 +125,8 @@ def cal_feature_per(x, window, coach, threshold):
         dx["features"] = Vectors.sparse(idx, l_idx, l_feature)
         #dx["features_body"] = str(l_feature)
         l.append(dx)
-        print "date2:", dx["date2"]
-        print "date3:", dx["date3"]
+        #print "date2:", dx["date2"]
+        #print "date3:", dx["date3"]
 
     return l
 
@@ -151,58 +152,34 @@ def cal_feature(df, window, coach, threshold):
              .map(lambda x: x[1])
 
 
-def save(lp, table_name, sql_context, is_hive):
-    df = sql_context.createDataFrame(lp)
-    print df.first()
-    dfToTable(sql_context, df, table_name)
-
 def get_labeled_points(start, end, df, sc, sql_context):
     print df.first()
-    return df.filter(df.date1 >= start).filter(df.date3<end).filter(df.label != -1)
-
-def get_labeled_points_last(df, sc, sql_context):
-    df =  df.filter(df.is_labeled == 0).withColumn("label", df.label*0)
-    df.registerTempTable("tmp_df")
-    df = df.filter(df.date2 == get_cur())
-    return df
+    return df.filter(df.date1 >= start).filter(df.date3<end)
 
 
 def cal_prob(x,label2index):
     dx = x.asDict()
-    del dx["features"]
-    del dx["indexedFeatures"]
+    dx["features"] = str(dx["features"])
+    dx["indexedFeatures"] = str(dx["indexedFeatures"])
     dx["prob"] = float(dx["probability"].toArray()[label2index[1]])
-    del dx["probability"] #= str(dx["probability"].toArray().tolist())
+    dx["probability"] = str(dx["probability"].toArray().tolist())
     del dx["rawPrediction"]
-    return dx
-def cal_prob2(x,label2index):
-    dx = {}
-    dx["symbol"] = x.symbol
-    dx["date1"] = x.date1
-    dx["date2"] = x.date2
-    dx["date3"] = x.date3
-    dx["label"] = x.label
-    dx["prediction"] = x.prediction
-    dx["prob"] = float(x.probability.toArray()[label2index[1]])
-
     return dx
 def val(predictions, label2index, sql_context):
     df = sql_context.createDataFrame(predictions.rdd.map(lambda x: cal_prob(x, label2index)))
     print df.count()
     dfToTable(sql_context, df, "check_pred", overwrite = False)
+    return df
 
 def get_model():
     from pyspark.ml.classification import RandomForestClassifier,GBTClassifier,LogisticRegression,DecisionTreeClassifier,NaiveBayes
-    #return RandomForestClassifier(numTrees = 4, maxDepth=10, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
+    #return RandomForestClassifier(numTrees = 2, maxDepth=5, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
     return DecisionTreeClassifier(maxDepth=5, maxBins = 32, labelCol="indexedLabel", featuresCol="indexedFeatures")
-    #return LogisticRegression(maxIter = 1000000,labelCol="indexedLabel", featuresCol="indexedFeatures")
+    #return LogisticRegression(maxIter = 100000,regParam=0.1,elasticNetParam=0.8,labelCol="indexedLabel", featuresCol="indexedFeatures")
 
 
-def run(start1, end1, start2, end2, df, sc, sql_context, fout):
+def run(start1, end1, start2, end2, df, sc, sql_context, is_pred):
     lp_data= get_labeled_points(start1, end2, df, sc, sql_context)
-    print lp_data.count()
-    lp_data_cur= get_labeled_points_last(df, sc, sql_context)
-    lp_data = lp_data.unionAll(lp_data_cur).cache()
     print lp_data.count()
 
     labelIndexer = StringIndexer(inputCol="label", outputCol="indexedLabel").fit(lp_data)
@@ -222,34 +199,29 @@ def run(start1, end1, start2, end2, df, sc, sql_context, fout):
 
     lp_train = lp_data.filter(lp_data.date3<end1).filter(lp_data.is_labeled == 1)
     model = pipeline.fit(lp_train)
-    #lp_check = get_labeled_points(start2, end2, "point_label", sc, sql_context)
-    lp_check = lp_data.filter(lp_data.date2>start2).filter(lp_data.is_labeled == 1)
+    lp_check = lp_data.filter(lp_data.date2>start2)
     predictions = model.transform(lp_check)
-    val(predictions, label2index, sql_context)
+    predictions = val(predictions, label2index, sql_context)
 
-    lp_cur = lp_data.filter(lp_data.is_labeled==0)
-    predictions = model.transform(lp_cur)
-    predictions = sql_context.createDataFrame(predictions.rdd.map(lambda x: cal_prob2(x, label2index)))
-    predictions = predictions.sort(predictions.prob.desc())
-    dfToCsv(predictions, fout)
-
-    for each in predictions.take(10):
-        print each
+    if is_pred:
+        predictions = predictions.filter(predictions.is_labeled ==0).filter(predictions.date2 == get_cur()).sort(predictions.prob.desc())
+        dfToTableWithPar(sql_context, predictions, "predictions", get_cur())
+        for each in predictions.take(10):
+            print each
+def get_buffer():
+    return 1.000
 def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
-    print df.count()
-    lp = cal_feature(df, window, coach, 1.00).cache()
-    print lp.count()
+    lp = cal_feature(df, window, coach, get_buffer()).cache()
     lp = sql_context.createDataFrame(lp)
     sql_context.sql("""
     DROP TABLE IF EXISTS %s
     """ % "check_pred")
-    run("2000-10-01","2015-10-01","2015-10-01", "2016-04-01",lp, sc, sql_context, "pred_%s.1.csv" % get_cur())
-
-    run("2000-04-01","2015-04-01","2015-04-01", "2016-10-01",lp, sc, sql_context, "pred_%s.2.csv" % get_cur())
+    #run("2000-10-01","2015-10-01","2015-10-01", "9999-99-99",lp, sc, sql_context, is_pred = True)
+    run("2000-04-01","2015-04-01","2015-04-01", "9999-99-99",lp, sc, sql_context, is_pred = False)
 
 
 if __name__ == "__main__":
     sc, sql_context = get_spark()
-    main(7, 1, sc, sql_context, is_hive=True)
+    main(30, 1, sc, sql_context, is_hive=True)
     sc.stop()

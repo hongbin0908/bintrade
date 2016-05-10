@@ -15,21 +15,21 @@ def cal_per(x):
     assert len(x) > 40
     x.sort(lambda xx,yy:cmp(xx.date, yy.date),reverse=False)
     
-    start = 39
+    start = 40
     l = []
 
-    for i in range(start, len(x)-1):
+    for i in range(start, len(x)):
         dx = x[i].asDict()
         isLabel = True
         for j in range(0, 40):
-            if dx["high"] < x[i-j].high:
+            if x[i-1].high < x[i-j-1].high:
                 isLabel = False
                 break
         for j in range(0,9):
-            if (dx["high"] - dx["low"]) < (x[i-j].high - x[i-j].low):
+            if (x[i-1].high - x[i-1].low) < (x[i-j-1].high - x[i-j-1].low):
                 isLabel = False
                 break
-        if x[i+1].high - dx["high"] < 0.01:
+        if x[i].high - x[i-1].high < 0.01:
             isLabel = False
         if isLabel:
             dx["label"] = 1

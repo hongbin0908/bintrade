@@ -1,24 +1,25 @@
 from pyspark import SparkConf, SparkContext, HiveContext
 from pyspark.sql.functions import substring
 from bintrade_tests.test_lib import *
+import ml.diff_feature_cls as cls
 
 
-def cal_(threshold, start, end, df):
-    rdd = df.rdd.filter(lambda x: x.prob > threshold and x.date2>=start and x.date2<end).persist()
+def cal_(threshold, buffer1, buffer2, start, end, df):
+    rdd = df.rdd.filter(lambda x: x.prob >= threshold and x.date2>=start and x.date2<end).cache()
     assert rdd.filter(lambda x: x.label == 1.0 and x.relclose2 < x.relclose1).count() == 0
     all = rdd.count()
-    acc = rdd.filter(lambda x: x.label == 1.0).count()
-    #acc2 = rdd.filter(lambda x: x.close2>=x.close1).count()
+    acc = rdd.filter(lambda x: x.act_diff >= buffer1).count()
+    acc2 = rdd.filter(lambda x: x.close2*1.0/x.close1>=buffer2).count()
 
-    return (acc, all)
+    return (acc,acc2, all)
 
 def cal(threshold, start, end, df):
-    acc, all = cal_(threshold, start, end,df)
-    acc_w, all_w = cal_(0.0, start, end,df)
+    acc, acc2, all = cal_(threshold, cls.get_buffer(),1.0, start, end,df)
+    acc_w, acc2_w, all_w = cal_(0.0, cls.get_buffer(),1.0, start, end,df)
     if all > 0:
-        print "%f\t%d\t%d\t%f\\%f" % (threshold, acc, all, acc*1.0/all, acc_w*1.0/all_w)
+        print "%s\t%f\t%d\t%d\t%f\\%f\t%f\\%f" % (end, threshold, acc, all, acc*1.0/all, acc_w*1.0/all_w, acc2*1.0/all, acc2_w*1.0/all_w)
     else:
-        print "%f\t%d\t%d\t%f\\%f" % (threshold, acc, all, 0.0, 0.0)
+        print "%s\t%f\t%d\t%d\t%f\\%f" % (end, threshold, acc, all, 0.0, 0.0)
 
     
 
@@ -100,13 +101,20 @@ def main(sc, sql_context):
             tmp_df_diff diff
         ON
             p.date3= diff.date
+        WHERE
+            p.is_labeled = 1
     """)
     
 
 
-    cal(0.6, "2015-04-01", "2016-04-01", df)
-    cal(0.65, "2015-04-01", "2016-04-01", df)
-    cal(0.7, "2015-04-01", "2016-04-01", df)
+    cal(0.5, "2015-04-01", "9999-04-01", df)
+    cal(0.6, "2015-04-01", "9999-04-01", df)
+    cal(0.7, "2015-04-01", "9999-04-01", df)
+    cal(0.8, "2015-04-01", "9999-04-01", df)
+    cal(0.9, "2015-04-01", "9999-04-01", df)
+    cal(1.0, "2015-04-01", "9999-04-01", df)
+    cal(0.6, "2016-05-01", "2016-06-01", df)
+    cal(0.6, "2016-04-01", "2016-05-01", df)
     cal(0.6, "2016-03-01", "2016-04-01", df)
     cal(0.6, "2016-02-01", "2016-03-01", df)
     cal(0.6, "2016-01-01", "2016-02-01", df)
@@ -121,7 +129,6 @@ def main(sc, sql_context):
     cal(0.6, "2015-04-01", "2015-05-01", df)
 
     dfToTable(sql_context, df, "check_pred_ext")
-    dfToCsv(df.filter(df.prob>0.6).orderBy(desc("prob"),'symbol','date2'), "check_pred_ext.csv")
 if __name__ == "__main__":
     sc, sql_context = get_spark()
     main(sc, sql_context)
