@@ -215,7 +215,6 @@ def main(window, coach, sc, sql_context, is_hive = True):
     df =  get_lp(sc, sql_context, is_hive)
     lp = cal_feature(df, window, coach, get_buffer()).cache()
     lp = sql_context.createDataFrame(lp)
-    count = lp.count()
     first = lp.first()
     print first.features
     print len(first.features)
